@@ -1,0 +1,58 @@
+manifest should match snapshot:
+  1: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: workload
+        app.kubernetes.io/version: 0.3.0
+        helm.sh/chart: workload-0.3.0
+      name: RELEASE-NAME-workload
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: workload
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: workload
+        spec:
+          containers:
+            - image: nginx:0.3.0
+              imagePullPolicy: IfNotPresent
+              name: workload
+              ports: null
+              resources: {}
+              securityContext: {}
+              volumeMounts: null
+          securityContext: {}
+          serviceAccountName: RELEASE-NAME-workload
+pod spec should match snapshot:
+  1: |
+    containers:
+      - image: nginx:0.3.0
+        imagePullPolicy: IfNotPresent
+        name: workload
+        ports: null
+        resources: {}
+        securityContext: {}
+        volumeMounts: null
+    securityContext: {}
+    serviceAccountName: RELEASE-NAME-workload
+should be able to set capabilities and securityContext:
+  1: |
+    capabilities:
+      add:
+        - NET_ADMIN
+    sysctls:
+      - name: net.ipv6.conf.all.disable_ipv6
+        value: "0"
+should reference the env-configmap if .Values.env are set:
+  1: |
+    - configMapRef:
+        name: RELEASE-NAME-workload

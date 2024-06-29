@@ -1,0 +1,29 @@
+suite: test env configmap
+templates:
+  - env_configmap.yaml
+tests:
+  - it: should be created if .env values are set and data populated with them
+    values:
+      - ../values.yaml
+    template: env_configmap.yaml
+    set:
+      env: |
+        FOO=bar
+        BAZ=qux
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchSnapshot:
+          path: data
+#      - matchRegex:
+#          path: metadata.name
+#          pattern: RELEASE-NAME-workload-env$
+  - it: should not be created if .env values are not set
+    values:
+      - ../values.yaml
+    template: env_configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+          of:
+            kind: ConfigMap
