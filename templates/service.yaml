@@ -20,7 +20,7 @@ metadata:
   labels:
     {{- include "workload.labels" $ | nindent 4 }}
 spec:
-  type: {{ default "ClusterIP" .serviceType }}
+  type: {{ default "ClusterIP" .service.type .serviceType }}
   ports:
     - port: {{ default .port .service.port }}
       targetPort: {{ default .name .containerPortNameOverride }}
