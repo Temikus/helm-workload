@@ -108,3 +108,26 @@ health:
 
 hostNetwork:
   enabled: false
+
+
+addons:
+  vpn:
+    enabled: false
+    image:
+      repository: ghcr.io/qdm12/gluetun
+      tag: latest
+      pullPolicy: Always
+    provider:
+      name: ""
+      type: ""
+    openvpn:
+      auth: {}
+    wireguard: {}
+    config:
+      timezone: UTC
+      serverSelection: {}
+    portForward:
+      enabled: false
+    persistence:
+      enabled: false
+      size: 1Gi

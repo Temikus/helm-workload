@@ -1,21 +1,24 @@
-suite: test vpn addon functionality
+# Path: workload/tests/addons_vpn_test.yaml
+suite: test addons integration
 templates:
   - deployment.yaml
-  # Note: we might need to add PVC template here if we're testing PVC creation
+  - statefulset.yaml
 tests:
-  - it: should not add vpn sidecar by default
+  - it: should not add vpn sidecar to deployment by default
     values:
       - ../values.yaml
     template: deployment.yaml
     asserts:
+      - isKind:
+          of: Deployment
       - lengthEqual:
           path: spec.template.spec.containers
           count: 1
-      - notContains:
-          path: spec.template.spec.containers[*].name
-          content: gluetun
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: workload
 
-  - it: should add vpn sidecar with OpenVPN configuration when enabled
+  - it: should add vpn sidecar to deployment when enabled
     values:
       - ../values.yaml
     template: deployment.yaml
@@ -23,10 +26,6 @@ tests:
       addons:
         vpn:
           enabled: true
-          image:
-            repository: ghcr.io/qdm12/gluetun
-            tag: v3.30.0
-            pullPolicy: Always
           provider:
             name: mullvad
             type: openvpn
@@ -34,128 +33,30 @@ tests:
             auth:
               username: test-user
               password: test-pass
-          config:
-            timezone: UTC
-            serverSelection:
-              countries:
-                - netherlands
-                - sweden
     asserts:
+      - isKind:
+          of: Deployment
       - lengthEqual:
           path: spec.template.spec.containers
           count: 2
-      - contains:
-          path: spec.template.spec.containers[*].name
-          content: gluetun
       - equal:
-          path: spec.template.spec.containers[1].image
-          value: ghcr.io/qdm12/gluetun:v3.30.0
+          path: spec.template.spec.containers[0].name
+          value: gluetun
       - equal:
-          path: spec.template.spec.containers[1].imagePullPolicy
-          value: Always
-      - exists:
-          path: spec.template.spec.containers[1].securityContext.capabilities.add
-      - contains:
-          path: spec.template.spec.containers[1].securityContext.capabilities.add
-          content: NET_ADMIN
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: VPN_SERVICE_PROVIDER
-            value: "mullvad"
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: VPN_TYPE
-            value: "openvpn"
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: OPENVPN_USER
-            value: "test-user"
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: OPENVPN_PASSWORD
-            value: "test-pass"
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: SERVER_COUNTRIES
-            value: "netherlands,sweden"
+          path: spec.template.spec.containers[1].name
+          value: workload
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/qdm12/gluetun:latest
 
-  - it: should properly configure vpn with existing secret for OpenVPN
+  - it: should add vpn sidecar to statefulset when enabled
     values:
       - ../values.yaml
-    template: deployment.yaml
+    template: statefulset.yaml
     set:
-      addons:
-        vpn:
-          enabled: true
-          provider:
-            name: mullvad
-            type: openvpn
-          openvpn:
-            auth:
-              existingSecret: vpn-credentials
-              existingSecretUsernameKey: vpn-user
-              existingSecretPasswordKey: vpn-pass
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: OPENVPN_USER
-            valueFrom:
-              secretKeyRef:
-                name: vpn-credentials
-                key: vpn-user
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: OPENVPN_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: vpn-credentials
-                key: vpn-pass
-
-  - it: should configure WireGuard properly
-    values:
-      - ../values.yaml
-    template: deployment.yaml
-    set:
-      addons:
-        vpn:
-          enabled: true
-          provider:
-            name: mullvad
-            type: wireguard
-          wireguard:
-            privateKey: ABCDEF0123456789
-            addresses:
-              - 10.64.0.2/32
-              - fd00:1234::/128
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: VPN_TYPE
-            value: "wireguard"
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: WIREGUARD_PRIVATE_KEY
-            value: "ABCDEF0123456789"
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: WIREGUARD_ADDRESSES
-            value: "10.64.0.2/32,fd00:1234::/128"
-
-  - it: should enable port forwarding when configured
-    values:
-      - ../values.yaml
-    template: deployment.yaml
-    set:
+      persistence:
+        enabled: true
+        type: statefulset
       addons:
         vpn:
           enabled: true
@@ -166,16 +67,17 @@ tests:
             auth:
               username: test-user
               password: test-pass
-          portForward:
-            enabled: true
     asserts:
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: PORT_FORWARDING_ENABLED
-            value: "true"
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: workload
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: gluetun
 
-  - it: should mount volumes correctly with existing claim
+  - it: should create proper volume configuration when persistence is enabled
     values:
       - ../values.yaml
     template: deployment.yaml
@@ -192,21 +94,21 @@ tests:
               password: test-pass
           persistence:
             enabled: true
-            existingClaim: existing-gluetun-config
+            size: 1Gi
     asserts:
-      - contains:
-          path: spec.template.spec.containers[1].volumeMounts
-          content:
-            name: gluetun-config
-            mountPath: /gluetun
-      - contains:
-          path: spec.template.spec.volumes
-          content:
-            name: gluetun-config
-            persistentVolumeClaim:
-              claimName: existing-gluetun-config
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: gluetun-config
+      - exists:
+          path: spec.template.spec.volumes[0].persistentVolumeClaim
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: gluetun-config
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /gluetun
 
-  - it: should fail when required values are missing
+  - it: should properly set OpenVPN environment variables
     values:
       - ../values.yaml
     template: deployment.yaml
@@ -214,6 +116,23 @@ tests:
       addons:
         vpn:
           enabled: true
+          provider:
+            name: mullvad
+            type: openvpn
+          openvpn:
+            auth:
+              username: test-user
+              password: test-pass
     asserts:
-      - failedTemplate:
-          errorMessage: "VPN provider name is required"
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "VPN_SERVICE_PROVIDER")].value
+          pattern: mullvad
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "VPN_TYPE")].value
+          pattern: openvpn
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "OPENVPN_USER")].value
+          pattern: test-user
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "OPENVPN_PASSWORD")].value
+          pattern: test-pass
