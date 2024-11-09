@@ -373,8 +373,8 @@
       "description": "Pod affinity rules"
     },
     "env": {
-      "type": "string",
-      "description": "Environment variables in key=value format"
+      "type": "object",
+      "description": "Environment variables"
     },
     "command": {
       "type": "array",

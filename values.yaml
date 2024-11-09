@@ -109,7 +109,6 @@ health:
 hostNetwork:
   enabled: false
 
-
 addons:
   vpn:
     enabled: false

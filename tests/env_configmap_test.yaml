@@ -7,9 +7,9 @@ tests:
       - ../values.yaml
     template: env_configmap.yaml
     set:
-      env: |
-        FOO=bar
-        BAZ=qux
+      env:
+        FOO: "bar"
+        BAZ: "qux"
     asserts:
       - isKind:
           of: ConfigMap

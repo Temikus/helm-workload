@@ -31,9 +31,9 @@ tests:
       - ../values.yaml
     template: deployment.yaml
     set:
-      env: |
-        FOO=bar
-        BAZ=qux
+      env:
+        FOO: "bar"
+        BAZ: "qux"
     asserts:
       - matchSnapshot:
           path: spec.template.spec.containers[0].envFrom
