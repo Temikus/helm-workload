@@ -1,0 +1,219 @@
+suite: test vpn addon functionality
+templates:
+  - deployment.yaml
+  # Note: we might need to add PVC template here if we're testing PVC creation
+tests:
+  - it: should not add vpn sidecar by default
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+      - notContains:
+          path: spec.template.spec.containers[*].name
+          content: gluetun
+
+  - it: should add vpn sidecar with OpenVPN configuration when enabled
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          image:
+            repository: ghcr.io/qdm12/gluetun
+            tag: v3.30.0
+            pullPolicy: Always
+          provider:
+            name: mullvad
+            type: openvpn
+          openvpn:
+            auth:
+              username: test-user
+              password: test-pass
+          config:
+            timezone: UTC
+            serverSelection:
+              countries:
+                - netherlands
+                - sweden
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - contains:
+          path: spec.template.spec.containers[*].name
+          content: gluetun
+      - equal:
+          path: spec.template.spec.containers[1].image
+          value: ghcr.io/qdm12/gluetun:v3.30.0
+      - equal:
+          path: spec.template.spec.containers[1].imagePullPolicy
+          value: Always
+      - exists:
+          path: spec.template.spec.containers[1].securityContext.capabilities.add
+      - contains:
+          path: spec.template.spec.containers[1].securityContext.capabilities.add
+          content: NET_ADMIN
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: VPN_SERVICE_PROVIDER
+            value: "mullvad"
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: VPN_TYPE
+            value: "openvpn"
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: OPENVPN_USER
+            value: "test-user"
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: OPENVPN_PASSWORD
+            value: "test-pass"
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: SERVER_COUNTRIES
+            value: "netherlands,sweden"
+
+  - it: should properly configure vpn with existing secret for OpenVPN
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: openvpn
+          openvpn:
+            auth:
+              existingSecret: vpn-credentials
+              existingSecretUsernameKey: vpn-user
+              existingSecretPasswordKey: vpn-pass
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: OPENVPN_USER
+            valueFrom:
+              secretKeyRef:
+                name: vpn-credentials
+                key: vpn-user
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: OPENVPN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: vpn-credentials
+                key: vpn-pass
+
+  - it: should configure WireGuard properly
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: ABCDEF0123456789
+            addresses:
+              - 10.64.0.2/32
+              - fd00:1234::/128
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: VPN_TYPE
+            value: "wireguard"
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: WIREGUARD_PRIVATE_KEY
+            value: "ABCDEF0123456789"
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: WIREGUARD_ADDRESSES
+            value: "10.64.0.2/32,fd00:1234::/128"
+
+  - it: should enable port forwarding when configured
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: openvpn
+          openvpn:
+            auth:
+              username: test-user
+              password: test-pass
+          portForward:
+            enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: PORT_FORWARDING_ENABLED
+            value: "true"
+
+  - it: should mount volumes correctly with existing claim
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: openvpn
+          openvpn:
+            auth:
+              username: test-user
+              password: test-pass
+          persistence:
+            enabled: true
+            existingClaim: existing-gluetun-config
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: gluetun-config
+            mountPath: /gluetun
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: gluetun-config
+            persistentVolumeClaim:
+              claimName: existing-gluetun-config
+
+  - it: should fail when required values are missing
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "VPN provider name is required"

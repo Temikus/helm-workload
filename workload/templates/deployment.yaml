@@ -69,6 +69,10 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{/* Add VPN sidecar if enabled */}}
+      {{- if ((.Values.vpn).enabled) }}
+        {{ include "gluetun.sidecar" . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -81,8 +85,14 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.volumes.host }}
+      # add additional volumes if vpn.enabled is true
+      {{- if or ((.Values.vpn).enabled) ((.Values.volumes).host) }}
       volumes:
+      {{- with .Values.volumes.host   }}
         {{- toYaml . | nindent 8 }}
       {{ end }}
+      {{- if ((.Values.vpn).enabled) }}
+        {{- include "gluetun.volume" . | nindent 8 }}
+      {{ end }}
+      {{- end }}
 {{- end }}

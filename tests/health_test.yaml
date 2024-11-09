@@ -1,0 +1,162 @@
+suite: test health checks
+templates: ["deployment.yaml"]
+tests:
+  - it: should configure all probes correctly
+    set:
+      image:
+        repository: nginx
+      health:
+        startupProbe:
+          enabled: true
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          enabled: true
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          enabled: true
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should disable probes when not enabled
+    set:
+      image:
+        repository: nginx
+      health:
+        startupProbe:
+          enabled: false
+        livenessProbe:
+          enabled: false
+        readinessProbe:
+          enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
+
+  - it: should handle mixed enabled/disabled state
+    set:
+      image:
+        repository: nginx
+      health:
+        startupProbe:
+          enabled: false
+        livenessProbe:
+          enabled: true
+          httpGet:
+            path: /healthz
+            port: http
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 5
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+
+  - it: should configure HTTP probes
+    set:
+      image:
+        repository: nginx
+      health:
+        livenessProbe:
+          enabled: true
+          httpGet:
+            path: /healthz
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          enabled: true
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should configure HTTP probes with headers
+    set:
+      image:
+        repository: nginx
+      health:
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+            httpHeaders:
+              - name: Custom-Header
+                value: Awesome
+          periodSeconds: 10
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.httpHeaders[0].name
+          value: Custom-Header
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.httpHeaders[0].value
+          value: Awesome
+
+  - it: should configure TCP probes
+    set:
+      image:
+        repository: nginx
+      health:
+        livenessProbe:
+          enabled: true
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          enabled: true
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should configure exec probes
+    set:
+      image:
+        repository: nginx
+      health:
+        livenessProbe:
+          enabled: true
+          exec:
+            command:
+              - cat
+              - /tmp/healthy
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          enabled: true
+          exec:
+            command:
+              - cat
+              - /tmp/ready
+          initialDelaySeconds: 30
+          periodSeconds: 10
+    asserts:
+      - matchSnapshot: {}

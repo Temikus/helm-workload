@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "workload.env-configMapName" . }}
+  name: {{ include "hwl.env-configMapName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "workload.labels" . | nindent 4 }}
+    {{- include "hwl.labels" . | nindent 4 }}
 data:
   {{- toYaml .Values.env | nindent 2 }}
 {{- end }}

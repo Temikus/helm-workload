@@ -96,6 +96,7 @@ affinity: {}
 health:
   livenessProbe: {}
   readinessProbe: {}
+  startupProbe: {}
   # livenessProbe:
   #   httpGet:
   #     path: /
