@@ -1,0 +1,129 @@
+suite: test pvc
+templates:
+  - pvc.yaml
+tests:
+  - it: should not create PVC by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create PVC when persistence is enabled but type is not pvc
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create PVC when existingClaim is specified
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        existingClaim: existing-pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create basic PVC when enabled with type pvc
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: spec.resources.requests.storage
+          value: "1Gi"
+      - equal:
+          path: spec.accessModes[0]
+          value: "ReadWriteOnce"
+
+  - it: should set storageClassName when specified
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: standard
+
+  - it: should set annotations when provided
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+        annotations:
+          "backup.velero.io/backup-volumes": data
+    asserts:
+      - equal:
+          path: metadata.annotations["backup.velero.io/backup-volumes"]
+          value: data
+
+  - it: should set selector labels when provided
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+        selectorLabels:
+          type: ssd
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels.type
+          value: ssd
+
+  - it: should set extra PVC labels when provided
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+        extraPvcLabels:
+          environment: production
+    asserts:
+      - equal:
+          path: metadata.labels.environment
+          value: production
+
+  - it: should set finalizers when provided
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+        finalizers:
+          - kubernetes.io/pvc-protection
+    asserts:
+      - equal:
+          path: metadata.finalizers[0]
+          value: kubernetes.io/pvc-protection
+
+  - it: should properly name the PVC based on fullname
+    set:
+      persistence:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        accessModes: ["ReadWriteOnce"]
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-workload
