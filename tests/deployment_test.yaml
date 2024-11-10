@@ -51,3 +51,45 @@ tests:
     asserts:
       - matchSnapshot:
           path: spec.template.spec.containers[0].securityContext
+
+  - it: should not include volume mounts when none are configured
+    set: {}
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value: null
+
+  - it: should handle legacy host volumes format
+    set:
+      volumes:
+        host:
+          - name: config
+            containerPath:
+              path: /etc/config
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: config
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /etc/config
+
+  - it: should handle direct volumeMounts format
+    set:
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log
+          readOnly: true
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: logs
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /var/log
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].readOnly
+          value: true

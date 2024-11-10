@@ -1,0 +1,128 @@
+# workload/tests/statefulset_test.yaml
+
+suite: test volume mounts
+templates:
+  - deployment.yaml
+  - statefulset.yaml
+tests:
+  - it: should handle persistence volume mounts correctly
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+        mountPath: /data
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: storage
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /data
+
+  - it: should handle persistence volume mounts with subPath
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+        mountPath: /data
+        subPath: myapp
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].subPath
+          value: myapp
+
+  - it: should handle all volume mount types together in correct order
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+        mountPath: /data
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+      volumes:
+        host:
+          - name: config
+            containerPath:
+              path: /etc/config
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log
+          readOnly: true
+    template: statefulset.yaml
+    asserts:
+      # First mount should be persistence
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: storage
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /data
+      # Second mount should be host volume
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[1].name
+          value: config
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[1].mountPath
+          value: /etc/config
+      # Third mount should be direct volumeMount
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[2].name
+          value: logs
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[2].mountPath
+          value: /var/log
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[2].readOnly
+          value: true
+
+  # Test deployments
+  - it: should handle legacy host volumes format
+    set:
+      volumes:
+        host:
+          - name: config
+            containerPath:
+              path: /etc/config
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: config
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /etc/config
+
+  - it: should handle direct volumeMounts format
+    set:
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log
+          readOnly: true
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: logs
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /var/log
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].readOnly
+          value: true
+
+  - it: should not include volume mounts when none are configured
+    set: {}
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value: null

@@ -84,3 +84,45 @@ tests:
       - equal:
           path: metadata.name
           value: bar
+
+  - it: should set correct service type when specified
+    template: service.yaml
+    set:
+      ports:
+        - name: smbd
+          port: 445
+          service:
+            enabled: true
+            type: LoadBalancer
+            port: 446
+        - name: http
+          port: 80
+          service:
+            enabled: true
+            type: ClusterIP
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+        documentIndex: 0
+      - equal:
+          path: spec.type
+          value: ClusterIP
+        documentIndex: 1
+      - equal:
+          path: spec.ports[0].port
+          value: 446
+        documentIndex: 0
+
+  - it: should default to ClusterIP when type not specified
+    template: service.yaml
+    set:
+      ports:
+        - name: http
+          port: 80
+          service:
+            enabled: true
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
