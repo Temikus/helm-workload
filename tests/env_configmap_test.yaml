@@ -15,9 +15,6 @@ tests:
           of: ConfigMap
       - matchSnapshot:
           path: data
-#      - matchRegex:
-#          path: metadata.name
-#          pattern: RELEASE-NAME-workload-env$
   - it: should not be created if .env values are not set
     values:
       - ../values.yaml
@@ -27,3 +24,105 @@ tests:
           count: 0
           of:
             kind: ConfigMap
+
+  - it: should not create ConfigMap when env is not set
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create ConfigMap with basic env vars
+    set:
+      env:
+        FOO: "bar"
+        BAZ: "qux"
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.FOO
+          value: "bar"
+      - equal:
+          path: data.BAZ
+          value: "qux"
+
+  - it: should use correct name format
+    set:
+      env:
+        TEST: "value"
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: RELEASE-NAME-workload
+
+  - it: should set standard labels
+    set:
+      env:
+        TEST: "value"
+    asserts:
+      - matchRegex:
+          path: metadata.labels["app.kubernetes.io/name"]
+          pattern: workload
+      - matchRegex:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          pattern: RELEASE-NAME
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: workload-[0-9]+\.[0-9]+\.[0-9]+
+
+  - it: should handle complex environment variables
+    set:
+      env:
+        SIMPLE: "value"
+        JSON_DATA: |
+          {
+            "key": "value",
+            "nested": {
+              "data": "test"
+            }
+          }
+        MULTILINE: |
+          line1
+          line2
+          line3
+    asserts:
+      - exists:
+          path: data.SIMPLE
+      - exists:
+          path: data.JSON_DATA
+      - exists:
+          path: data.MULTILINE
+
+  - it: should handle empty values
+    set:
+      env:
+        EMPTY: ""
+    asserts:
+      - equal:
+          path: data.EMPTY
+          value: ""
+
+  - it: should set correct namespace
+    set:
+      env:
+        TEST: "value"
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+
+  - it: should handle multiple env vars with special characters
+    set:
+      env:
+        URL: "https://example.com"
+        PATH_VAR: "/usr/local/bin:/usr/bin"
+        SPECIAL_CHARS: "!@#$%^&*()"
+    asserts:
+      - equal:
+          path: data.URL
+          value: "https://example.com"
+      - equal:
+          path: data.PATH_VAR
+          value: "/usr/local/bin:/usr/bin"
+      - equal:
+          path: data.SPECIAL_CHARS
+          value: "!@#$%^&*()"
