@@ -1,0 +1,74 @@
+suite: test hpa
+templates: ["hpa.yaml"]
+tests:
+  - it: should not create HPA by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create HPA when enabled
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 80
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+      - equal:
+          path: spec.metrics[0].resource.targetAverageUtilization
+          value: 80
+
+  - it: should support both CPU and memory metrics
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 85
+    asserts:
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu
+      - equal:
+          path: spec.metrics[0].resource.targetAverageUtilization
+          value: 80
+      - equal:
+          path: spec.metrics[1].resource.name
+          value: memory
+      - equal:
+          path: spec.metrics[1].resource.targetAverageUtilization
+          value: 85
+
+  - it: should properly set scaleTargetRef for Deployment
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+
+  - it: should properly set scaleTargetRef for StatefulSet
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+      persistence:
+        enabled: true
+        type: statefulset
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: StatefulSet
