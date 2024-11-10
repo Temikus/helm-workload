@@ -1,1 +1,13 @@
-{{- include "hwl.service" . }}
+{{- /* Define which ports should have services */ -}}
+{{- $servicePorts := list }}
+{{- range .Values.ports }}
+  {{- if and .service .service.enabled }}
+    {{- $servicePorts = append $servicePorts . }}
+  {{- end }}
+{{- end }}
+
+{{- /* If we have any service ports, include the hwl service template */ -}}
+{{- if $servicePorts }}
+  {{- $_ := set .Values "_servicePorts" $servicePorts }}
+  {{- include "hwl.service" . }}
+{{- end }}
