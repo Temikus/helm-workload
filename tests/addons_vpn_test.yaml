@@ -77,6 +77,26 @@ tests:
           path: spec.template.spec.containers[0].name
           value: gluetun
 
+  - it: should be a priveleged container to manipulate TUN devices properly
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: openvpn
+          openvpn:
+            auth:
+              username: test-user
+              password: test-pass
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.privileged
+          value: true
+
   - it: should create proper volume configuration when persistence is enabled
     values:
       - ../values.yaml
