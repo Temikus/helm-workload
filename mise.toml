@@ -1,0 +1,3 @@
+[tasks.build]
+description = "Build the CLI"
+run = "helm dependency update"
