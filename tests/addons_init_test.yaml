@@ -1,0 +1,87 @@
+suite: test init container addon
+templates:
+  - deployment.yaml
+  - statefulset.yaml
+tests:
+  - it: should not add init container by default
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: should add init container when enabled
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        init:
+          enabled: true
+          image:
+            repository: busybox
+            tag: latest
+          command: ["sh", "-c", "echo 'Initializing...'"]
+    asserts:
+      - isKind:
+          of: Deployment
+      - exists:
+          path: spec.template.spec.initContainers
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: init
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: busybox:latest
+      - equal:
+          path: spec.template.spec.initContainers[0].command[0]
+          value: sh
+
+  - it: should properly configure volume mounts
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        init:
+          enabled: true
+          image:
+            repository: busybox
+            tag: latest
+          command: ["sh", "-c", "echo 'Initializing...'"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].volumeMounts[0].name
+          value: data
+      - equal:
+          path: spec.template.spec.initContainers[0].volumeMounts[0].mountPath
+          value: /data
+
+  - it: should set security context when specified
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        init:
+          enabled: true
+          image:
+            repository: busybox
+            tag: latest
+          command: ["sh", "-c", "echo 'Initializing...'"]
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsGroup
+          value: 1000

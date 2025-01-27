@@ -108,8 +108,16 @@ health:
 
 hostNetwork:
   enabled: false
-
 addons:
+  init:
+    enabled: false
+    image:
+      repository: ""
+      tag: ""
+      pullPolicy: IfNotPresent
+    command: [ ]
+    securityContext: { }
+    volumeMounts: [ ]
   vpn:
     enabled: false
     image:
