@@ -1,3 +1,18 @@
 [tasks.build]
-description = "Build the CLI"
-run = "helm dependency update"
+description = "Build the chart"
+run = [
+    'helm dependency update',
+    'helm package -d .. .'
+]
+
+[tasks.test]
+description = "Test the chart"
+run = "helm unittest ."
+
+[tasks.update-snapshot]
+description = "Test the chart"
+run = "helm unittest -u ."
+
+[tasks.lint]
+description = "Lint the chart"
+run = "helm lint ."
