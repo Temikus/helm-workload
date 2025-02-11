@@ -29,13 +29,10 @@ should match basic snapshot:
               ports:
                 - containerPort: 80
                   name: foo
-                  protocol: TCP
                 - containerPort: 443
                   name: bar
-                  protocol: TCP
                 - containerPort: 8080
                   name: baz
-                  protocol: TCP
               resources: {}
               securityContext: {}
               volumeMounts: null

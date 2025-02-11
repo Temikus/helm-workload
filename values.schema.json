@@ -155,7 +155,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["host", "paths"],
+            "required": ["host"],
             "properties": {
               "host": {
                 "type": "string",
