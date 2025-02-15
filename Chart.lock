@@ -1,6 +1,6 @@
 dependencies:
 - name: hwl
   repository: file://../hwl
-  version: 0.1.1
-digest: sha256:8609dad58fd8f9b424581ae1bef200ff0c643de6eca8fda429247962fe88cf36
-generated: "2025-01-27T15:35:26.054513+11:00"
+  version: 0.1.2
+digest: sha256:f86eddd9cf7333d821ce24131233b508211b15f8181f8b3379873536fd7db3f3
+generated: "2025-02-15T18:36:21.168779+11:00"
