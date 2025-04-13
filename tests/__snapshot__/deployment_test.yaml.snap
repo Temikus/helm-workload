@@ -7,8 +7,8 @@ manifest should match snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 0.3.0
-        helm.sh/chart: workload-0.3.0
+        app.kubernetes.io/version: 0.3.1
+        helm.sh/chart: workload-0.3.1
       name: RELEASE-NAME-workload
     spec:
       replicas: 1
@@ -23,7 +23,7 @@ manifest should match snapshot:
             app.kubernetes.io/name: workload
         spec:
           containers:
-            - image: nginx:0.3.0
+            - image: nginx:0.3.1
               imagePullPolicy: IfNotPresent
               name: workload
               ports: null
@@ -35,7 +35,7 @@ manifest should match snapshot:
 pod spec should match snapshot:
   1: |
     containers:
-      - image: nginx:0.3.0
+      - image: nginx:0.3.1
         imagePullPolicy: IfNotPresent
         name: workload
         ports: null

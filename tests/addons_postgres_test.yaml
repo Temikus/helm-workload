@@ -1,0 +1,182 @@
+suite: test postgres addon integration
+templates:
+  - deployment.yaml
+  - statefulset.yaml
+  - pvc.yaml
+tests:
+  - it: should not add postgres sidecar to deployment by default
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: workload
+
+  - it: should add postgres sidecar to deployment when enabled
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+    asserts:
+      - isKind:
+          of: Deployment
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: postgres
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: workload
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: postgres:15-alpine
+
+  - it: should add postgres sidecar to statefulset when enabled
+    values:
+      - ../values.yaml
+    template: statefulset.yaml
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: workload
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: postgres
+
+  - it: should use the defined security context
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: 999
+
+  - it: should create proper volume configuration when persistence is enabled
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+          persistence:
+            enabled: true
+            size: 8Gi
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: postgres-data
+      - exists:
+          path: spec.template.spec.volumes[0].persistentVolumeClaim
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: postgres-data
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /var/lib/postgresql/data
+
+  - it: should create a PVC when persistence is enabled
+    values:
+      - ../values.yaml
+    template: pvc.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+          persistence:
+            enabled: true
+            size: 8Gi
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: spec.resources.requests.storage
+          value: 8Gi
+
+  - it: should properly set PostgreSQL environment variables
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: testuser
+            password: testpassword
+            database: testdb
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_USER")].value
+          pattern: testuser
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_PASSWORD")].value
+          pattern: testpassword
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_DB")].value
+          pattern: testdb
+
+  - it: should support existing secret for password
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: testuser
+            existingSecret: postgres-credentials
+            existingSecretKey: password
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_PASSWORD")].valueFrom.secretKeyRef
+      - equal:
+          path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_PASSWORD")].valueFrom.secretKeyRef.name
+          value: postgres-credentials
+      - equal:
+          path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_PASSWORD")].valueFrom.secretKeyRef.key
+          value: password

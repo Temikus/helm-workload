@@ -1,3 +1,8 @@
 {{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) (eq .Values.persistence.type "pvc")}}
 {{- include "hwl.pvc" . }}
 {{- end }}
+
+{{/* Include PostgreSQL PVC if enabled */}}
+{{- if and (hasKey .Values.addons "postgres") .Values.addons.postgres.enabled .Values.addons.postgres.persistence.enabled (not .Values.addons.postgres.persistence.existingClaim) -}}
+{{- include "hwl.postgres.pvc" . }}
+{{- end }}
