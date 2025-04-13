@@ -5,6 +5,33 @@ templates:
   - deployment.yaml
   - statefulset.yaml
 tests:
+  - it: should handle extraVolumes in statefulset correctly
+    set:
+      useStatefulSet: true
+      persistence:
+        enabled: true
+        mountPath: /data
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+        extraVolumes:
+          - name: logs
+            size: 5Gi
+            mountPath: /app/logs
+            storageClassName: standard
+            accessModes: ["ReadWriteOnce"]
+          - name: config
+            size: 1Gi
+            mountPath: /app/config
+            accessModes: ["ReadWriteOnce"]
+    template: statefulset.yaml
+    asserts:
+      # Verify StatefulSet is rendered
+      - isKind:
+          of: StatefulSet
+      - exists:
+          path: spec.volumeClaimTemplates
+
   - it: should handle persistence volume mounts correctly
     set:
       persistence:

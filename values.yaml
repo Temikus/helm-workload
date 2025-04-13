@@ -64,6 +64,30 @@ ingress:
 
 persistence:
   enabled: false
+  # size: 10Gi
+  # storageClassName: standard
+  # accessModes:
+  #   - ReadWriteOnce
+  # selectorLabels: {}
+  # mountPath: /data
+  # subPath: ""
+  # extraVolumes: []
+  # - name: logs
+  #   size: 5Gi
+  #   mountPath: /app/logs
+  #   storageClassName: standard
+  #   accessModes:
+  #     - ReadWriteOnce
+  #   labels: {}
+  #   annotations: {}
+  #   selectorLabels: {}
+  #   subPath: ""
+  #   readOnly: false
+  # - name: config
+  #   size: 1Gi
+  #   mountPath: /app/config
+  #   accessModes:
+  #     - ReadWriteOnce
 
 volumes:
   host: []
