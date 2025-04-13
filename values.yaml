@@ -36,14 +36,14 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
-ports: {}
-  #  - name: http
-  #    containerPort: 80
-  #    servicePort: 80
-  #    protocol: TCP
-  #    expose: true
-  #    serviceType: ClusterIP
-  #    servicePortNameOverride: webui
+ports: []
+  # - name: http
+  #   containerPort: 80
+  #   servicePort: 80
+  #   protocol: TCP
+  #   expose: true
+  #   serviceType: ClusterIP
+  #   servicePortNameOverride: webui
   #   containerPortNameOverride: webui
 
 ingress:
@@ -138,3 +138,20 @@ addons:
     persistence:
       enabled: false
       size: 1Gi
+  postgres:
+    enabled: false
+    image:
+      repository: postgres
+      tag: 15-alpine
+      pullPolicy: IfNotPresent
+    auth:
+      username: postgres
+      password: postgres-password
+      database: postgres
+    securityContext:
+      runAsUser: 999
+      runAsGroup: 999
+    persistence:
+      enabled: false
+      size: 10Gi
+      existingClaim: ""
