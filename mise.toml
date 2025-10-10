@@ -2,8 +2,12 @@
 description = "Build the chart"
 run = [
     'helm dependency update',
-    'helm package -d .. .'
+    'helm package -d pkg .'
 ]
+
+[tasks.push]
+description = "Push the chart to the repository"
+run = "helm push pkg/*.tgz oci://ghcr.io/temikus/helm-charts"
 
 [tasks.test]
 description = "Test the chart"
