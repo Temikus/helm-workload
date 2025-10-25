@@ -25,7 +25,12 @@ tests:
           timeoutSeconds: 5
           failureThreshold: 6
     asserts:
-      - matchSnapshot: {}
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].startupProbe
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].livenessProbe
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].readinessProbe
 
   - it: should disable probes when not enabled
     set:
@@ -94,7 +99,10 @@ tests:
           initialDelaySeconds: 30
           periodSeconds: 10
     asserts:
-      - matchSnapshot: {}
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].livenessProbe
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].readinessProbe
 
   - it: should configure HTTP probes with headers
     set:
@@ -135,7 +143,10 @@ tests:
           initialDelaySeconds: 30
           periodSeconds: 10
     asserts:
-      - matchSnapshot: {}
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].livenessProbe
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].readinessProbe
 
   - it: should configure exec probes
     set:
@@ -159,4 +170,7 @@ tests:
           initialDelaySeconds: 30
           periodSeconds: 10
     asserts:
-      - matchSnapshot: {}
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].livenessProbe
+      - matchSnapshot:
+          path: spec.template.spec.containers[0].readinessProbe

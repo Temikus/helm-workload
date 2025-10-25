@@ -22,7 +22,7 @@ tests:
       - service.yaml
     set:
       service:
-          port: 80
+        port: 80
       ports:
         - name: foo
           port: 80
@@ -37,8 +37,8 @@ tests:
 
   - it: should point to the correct service with default values
     templates:
-        - ingress.yaml
-        - service.yaml
+      - ingress.yaml
+      - service.yaml
     set:
       service:
         port: 80

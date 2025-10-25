@@ -1,189 +1,57 @@
 should configure HTTP probes:
   1: |
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 0.3.2
-        helm.sh/chart: workload-0.3.2
-      name: RELEASE-NAME-workload
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: workload
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: workload
-        spec:
-          containers:
-            - image: nginx:0.3.2
-              imagePullPolicy: IfNotPresent
-              livenessProbe:
-                failureThreshold: 6
-                httpGet:
-                  path: /healthz
-                  port: http
-                initialDelaySeconds: 30
-                periodSeconds: 10
-                timeoutSeconds: 5
-              name: workload
-              ports: null
-              readinessProbe:
-                httpGet:
-                  path: /ready
-                  port: http
-                initialDelaySeconds: 30
-                periodSeconds: 10
-              resources: {}
-              securityContext: {}
-              volumeMounts: null
-          securityContext: {}
-          serviceAccountName: RELEASE-NAME-workload
+    failureThreshold: 6
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+  2: |
+    httpGet:
+      path: /ready
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
 should configure TCP probes:
   1: |
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 0.3.2
-        helm.sh/chart: workload-0.3.2
-      name: RELEASE-NAME-workload
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: workload
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: workload
-        spec:
-          containers:
-            - image: nginx:0.3.2
-              imagePullPolicy: IfNotPresent
-              livenessProbe:
-                initialDelaySeconds: 30
-                periodSeconds: 10
-                tcpSocket:
-                  port: 80
-              name: workload
-              ports: null
-              readinessProbe:
-                initialDelaySeconds: 30
-                periodSeconds: 10
-                tcpSocket:
-                  port: 80
-              resources: {}
-              securityContext: {}
-              volumeMounts: null
-          securityContext: {}
-          serviceAccountName: RELEASE-NAME-workload
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    tcpSocket:
+      port: 80
+  2: |
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    tcpSocket:
+      port: 80
 should configure all probes correctly:
   1: |
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 0.3.2
-        helm.sh/chart: workload-0.3.2
-      name: RELEASE-NAME-workload
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: workload
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: workload
-        spec:
-          containers:
-            - image: nginx:0.3.2
-              imagePullPolicy: IfNotPresent
-              livenessProbe:
-                failureThreshold: 6
-                initialDelaySeconds: 60
-                periodSeconds: 10
-                timeoutSeconds: 5
-              name: workload
-              ports: null
-              readinessProbe:
-                failureThreshold: 6
-                initialDelaySeconds: 30
-                periodSeconds: 10
-                timeoutSeconds: 5
-              resources: {}
-              securityContext: {}
-              startupProbe:
-                failureThreshold: 6
-                initialDelaySeconds: 30
-                periodSeconds: 10
-                timeoutSeconds: 5
-              volumeMounts: null
-          securityContext: {}
-          serviceAccountName: RELEASE-NAME-workload
+    failureThreshold: 6
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+  2: |
+    failureThreshold: 6
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+  3: |
+    failureThreshold: 6
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
 should configure exec probes:
   1: |
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 0.3.2
-        helm.sh/chart: workload-0.3.2
-      name: RELEASE-NAME-workload
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: workload
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: workload
-        spec:
-          containers:
-            - image: nginx:0.3.2
-              imagePullPolicy: IfNotPresent
-              livenessProbe:
-                exec:
-                  command:
-                    - cat
-                    - /tmp/healthy
-                initialDelaySeconds: 30
-                periodSeconds: 10
-              name: workload
-              ports: null
-              readinessProbe:
-                exec:
-                  command:
-                    - cat
-                    - /tmp/ready
-                initialDelaySeconds: 30
-                periodSeconds: 10
-              resources: {}
-              securityContext: {}
-              volumeMounts: null
-          securityContext: {}
-          serviceAccountName: RELEASE-NAME-workload
+    exec:
+      command:
+        - cat
+        - /tmp/healthy
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  2: |
+    exec:
+      command:
+        - cat
+        - /tmp/ready
+    initialDelaySeconds: 30
+    periodSeconds: 10
