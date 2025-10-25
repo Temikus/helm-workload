@@ -1,5 +1,6 @@
 [tasks.build]
 description = "Build the chart"
+depends = ["clean"]
 run = [
     'helm dependency update',
     'helm package -d pkg .'
