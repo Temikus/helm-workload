@@ -20,3 +20,7 @@ run = "helm unittest -u ."
 [tasks.lint]
 description = "Lint the chart"
 run = "helm lint ."
+
+[tasks.clean]
+description = "Clean the pkg and charts directories"
+run = "rm -rf pkg/* charts/*"

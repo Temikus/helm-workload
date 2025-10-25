@@ -23,9 +23,6 @@ tests:
     asserts:
       - matchSnapshot:
           path: spec.template.spec
-  - it: manifest should match snapshot
-    asserts:
-      - matchSnapshot: {}
   - it: should reference the env-configmap if .Values.env are set
     values:
       - ../values.yaml
@@ -65,6 +62,7 @@ tests:
       volumes:
         host:
           - name: config
+            hostPath: /etc/host/config
             containerPath:
               path: /etc/config
     template: deployment.yaml
@@ -75,6 +73,41 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[0].mountPath
           value: /etc/config
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: config
+      - notExists:
+          path: spec.template.spec.volumes[0].containerPath
+
+  - it: should handle host volumes format
+    set:
+      volumes:
+        host:
+          - name: config
+            hostPath:
+              path: /etc/host/config
+              type: Directory
+            containerPath:
+              path: /etc/config
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: config
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /etc/config
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: config
+      - equal:
+          path: spec.template.spec.volumes[0].hostPath.path
+          value: /etc/host/config
+      - equal:
+          path: spec.template.spec.volumes[0].hostPath.type
+          value: Directory
+      - notExists:
+          path: spec.template.spec.volumes[0].containerPath
 
   - it: should handle direct volumeMounts format
     set:

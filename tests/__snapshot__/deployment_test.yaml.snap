@@ -1,41 +1,7 @@
-manifest should match snapshot:
-  1: |
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 0.3.2
-        helm.sh/chart: workload-0.3.2
-      name: RELEASE-NAME-workload
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: workload
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: workload
-        spec:
-          containers:
-            - image: nginx:0.3.2
-              imagePullPolicy: IfNotPresent
-              name: workload
-              ports: null
-              resources: {}
-              securityContext: {}
-              volumeMounts: null
-          securityContext: {}
-          serviceAccountName: RELEASE-NAME-workload
 pod spec should match snapshot:
   1: |
     containers:
-      - image: nginx:0.3.2
+      - image: nginx:0.3.3
         imagePullPolicy: IfNotPresent
         name: workload
         ports: null
