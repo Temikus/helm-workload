@@ -7,8 +7,8 @@ run = [
 ]
 
 [tasks.push]
-description = "Push the chart to the repository"
-run = "helm push pkg/*.tgz oci://ghcr.io/temikus/helm-charts"
+description = "Push the chart to the repository (only if version doesn't exist)"
+run = "./scripts/helm_push.sh"
 
 [tasks.test]
 description = "Test the chart"
