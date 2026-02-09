@@ -234,12 +234,20 @@
         "enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable persistence"
+          "description": "Enable persistence storage"
         },
         "type": {
           "type": "string",
           "enum": ["pvc", "sts", "StatefulSet", "statefulset"],
           "description": "Type of persistence to use"
+        },
+        "size": {
+          "type": "string",
+          "description": "Size of persistent volume claim"
+        },
+        "storageClassName": {
+          "type": "string",
+          "description": "Storage class to use for the PVC"
         },
         "accessModes": {
           "type": "array",
@@ -247,19 +255,19 @@
             "type": "string",
             "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany"]
           },
-          "description": "Access modes for the persistent volume"
+          "description": "Access modes for the PVC"
         },
-        "size": {
-          "type": "string",
-          "description": "Size of the persistent volume"
-        },
-        "storageClassName": {
-          "type": "string",
-          "description": "Storage class name"
+        "selectorLabels": {
+          "type": "object",
+          "description": "Selector labels for the PVC"
         },
         "mountPath": {
           "type": "string",
-          "description": "Mount path in the container"
+          "description": "Path to mount the volume"
+        },
+        "subPath": {
+          "type": "string",
+          "description": "Sub-path inside the volume"
         },
         "annotations": {
           "type": "object",
@@ -268,12 +276,59 @@
           },
           "description": "Annotations for the PVC"
         },
-        "selectorLabels": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Selector labels for the PVC"
+        "extraVolumes": {
+          "type": "array",
+          "description": "Additional volumes to attach to the statefulset",
+          "items": {
+            "type": "object",
+            "required": ["name", "size", "mountPath"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the volume"
+              },
+              "size": {
+                "type": "string",
+                "description": "Size of the volume"
+              },
+              "mountPath": {
+                "type": "string",
+                "description": "Path to mount the volume"
+              },
+              "storageClassName": {
+                "type": "string",
+                "description": "Storage class to use for the volume"
+              },
+              "accessModes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany"]
+                },
+                "description": "Access modes for the volume"
+              },
+              "labels": {
+                "type": "object",
+                "description": "Labels for the volume"
+              },
+              "annotations": {
+                "type": "object",
+                "description": "Annotations for the volume"
+              },
+              "selectorLabels": {
+                "type": "object",
+                "description": "Selector labels for the volume"
+              },
+              "subPath": {
+                "type": "string",
+                "description": "Sub-path inside the volume"
+              },
+              "readOnly": {
+                "type": "boolean",
+                "description": "Mount volume as read-only"
+              }
+            }
+          }
         }
       }
     },
@@ -423,14 +478,393 @@
     },
     "addons": {
       "type": "object",
+      "required": ["vpn", "init"],
       "properties": {
-        "vpn": {
+        "init": {
           "type": "object",
-          "description": "VPN sidecar configuration (see hwl chart schema for details)",
+          "required": ["enabled", "image"],
           "properties": {
             "enabled": {
               "type": "boolean",
-              "default": false
+              "default": false,
+              "description": "Enable init container"
+            },
+            "image": {
+              "type": "object",
+              "required": ["repository", "tag"],
+              "properties": {
+                "repository": {
+                  "type": "string",
+                  "description": "Init container image repository"
+                },
+                "tag": {
+                  "type": "string",
+                  "description": "Init container image tag"
+                },
+                "pullPolicy": {
+                  "type": "string",
+                  "default": "IfNotPresent",
+                  "enum": ["Always", "IfNotPresent", "Never"],
+                  "description": "Image pull policy"
+                }
+              }
+            },
+            "command": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Command to run in the init container"
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Security context for the init container"
+            },
+            "volumeMounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "mountPath"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Volume name"
+                  },
+                  "mountPath": {
+                    "type": "string",
+                    "description": "Path to mount volume"
+                  },
+                  "subPath": {
+                    "type": "string",
+                    "description": "Sub-path inside the volume"
+                  }
+                }
+              },
+              "description": "Volume mounts for the init container"
+            }
+          }
+        },
+        "vpn": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "image",
+            "provider",
+            "openvpn",
+            "wireguard",
+            "config",
+            "portForward",
+            "persistence"
+          ],
+          "properties": {
+            "firewall": {
+              "type": "object",
+              "description": "Firewall configuration for VPN"
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable VPN sidecar container"
+            },
+            "image": {
+              "type": "object",
+              "required": ["repository", "tag", "pullPolicy"],
+              "properties": {
+                "repository": {
+                  "type": "string",
+                  "default": "ghcr.io/qdm12/gluetun",
+                  "description": "Gluetun image repository"
+                },
+                "tag": {
+                  "type": "string",
+                  "default": "latest",
+                  "description": "Gluetun image tag"
+                },
+                "pullPolicy": {
+                  "type": "string",
+                  "default": "Always",
+                  "enum": ["Always", "IfNotPresent", "Never"],
+                  "description": "Image pull policy"
+                }
+              }
+            },
+            "provider": {
+              "type": "object",
+              "required": ["name", "type"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "VPN provider name"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["openvpn", "wireguard"],
+                  "description": "VPN connection type"
+                }
+              }
+            },
+            "openvpn": {
+              "type": "object",
+              "properties": {
+                "auth": {
+                  "type": "object",
+                  "properties": {
+                    "username": {
+                      "type": "string",
+                      "description": "OpenVPN username"
+                    },
+                    "password": {
+                      "type": "string",
+                      "description": "OpenVPN password"
+                    },
+                    "existingSecret": {
+                      "type": "string",
+                      "description": "Name of existing secret containing OpenVPN credentials"
+                    },
+                    "existingSecretUsernameKey": {
+                      "type": "string",
+                      "default": "username",
+                      "description": "Key in existing secret for username"
+                    },
+                    "existingSecretPasswordKey": {
+                      "type": "string",
+                      "default": "password",
+                      "description": "Key in existing secret for password"
+                    }
+                  }
+                }
+              }
+            },
+            "wireguard": {
+              "type": "object",
+              "properties": {
+                "privateKey": {
+                  "type": "string",
+                  "description": "WireGuard private key"
+                },
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "WireGuard addresses"
+                },
+                "existingSecret": {
+                  "type": "string",
+                  "description": "Name of existing secret containing WireGuard private key"
+                }
+              }
+            },
+            "config": {
+              "type": "object",
+              "required": ["timezone", "serverSelection"],
+              "properties": {
+                "timezone": {
+                  "type": "string",
+                  "default": "UTC",
+                  "description": "Container timezone"
+                },
+                "serverSelection": {
+                  "type": "object",
+                  "properties": {
+                    "countries": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of countries for server selection"
+                    },
+                    "cities": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of cities for server selection"
+                    },
+                    "hostnames": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of hostnames for server selection"
+                    }
+                  }
+                }
+              }
+            },
+            "portForward": {
+              "type": "object",
+              "required": ["enabled"],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable port forwarding"
+                }
+              }
+            },
+            "persistence": {
+              "type": "object",
+              "required": ["enabled", "size"],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable persistence for VPN configuration"
+                },
+                "size": {
+                  "type": "string",
+                  "default": "1Gi",
+                  "description": "Size of persistent volume claim"
+                },
+                "existingClaim": {
+                  "type": "string",
+                  "description": "Name of existing PVC"
+                }
+              }
+            },
+            "shareProcessNamespace": {
+              "type": "boolean",
+              "default": false,
+              "description": "Share process namespace with the main container"
+            }
+          }
+        },
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable PostgreSQL sidecar container"
+            },
+            "image": {
+              "type": "object",
+              "properties": {
+                "repository": {
+                  "type": "string",
+                  "default": "postgres",
+                  "description": "PostgreSQL image repository"
+                },
+                "tag": {
+                  "type": "string",
+                  "default": "15-alpine",
+                  "description": "PostgreSQL image tag"
+                },
+                "pullPolicy": {
+                  "type": "string",
+                  "default": "IfNotPresent",
+                  "enum": ["Always", "IfNotPresent", "Never"],
+                  "description": "Image pull policy"
+                }
+              }
+            },
+            "auth": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "default": "postgres",
+                  "description": "PostgreSQL username"
+                },
+                "password": {
+                  "type": "string",
+                  "description": "PostgreSQL password"
+                },
+                "database": {
+                  "type": "string",
+                  "default": "postgres",
+                  "description": "PostgreSQL database name"
+                },
+                "existingSecret": {
+                  "type": "string",
+                  "description": "Name of existing secret containing PostgreSQL credentials"
+                },
+                "existingSecretKey": {
+                  "type": "string",
+                  "description": "Key in existing secret for password"
+                }
+              }
+            },
+            "resources": {
+              "type": "object",
+              "properties": {
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string",
+                      "description": "CPU limit"
+                    },
+                    "memory": {
+                      "type": "string",
+                      "description": "Memory limit"
+                    }
+                  }
+                },
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string",
+                      "description": "CPU request"
+                    },
+                    "memory": {
+                      "type": "string",
+                      "description": "Memory request"
+                    }
+                  }
+                }
+              }
+            },
+            "persistence": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable persistence for PostgreSQL data"
+                },
+                "size": {
+                  "type": "string",
+                  "default": "8Gi",
+                  "description": "Size of persistent volume claim"
+                },
+                "existingClaim": {
+                  "type": "string",
+                  "description": "Name of existing PVC"
+                },
+                "storageClass": {
+                  "type": "string",
+                  "description": "Storage class name"
+                },
+                "accessMode": {
+                  "type": "string",
+                  "default": "ReadWriteOnce",
+                  "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany"],
+                  "description": "Access mode for the PVC"
+                },
+                "subPath": {
+                  "type": "string",
+                  "default": "data",
+                  "description": "Sub-path inside the volume"
+                }
+              }
+            },
+            "livenessProbe": {
+              "type": "object",
+              "description": "Custom liveness probe configuration"
+            },
+            "readinessProbe": {
+              "type": "object",
+              "description": "Custom readiness probe configuration"
+            },
+            "additionalEnv": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Additional environment variables"
             }
           }
         }

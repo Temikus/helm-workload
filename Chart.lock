@@ -1,6 +1,0 @@
-dependencies:
-- name: hwl
-  repository: oci://ghcr.io/temikus/helm-charts
-  version: 0.1.8
-digest: sha256:c135bccd85a0ed194ef16343daf66ff642e45cce3a62d0870e05a92e8323b379
-generated: "2025-10-28T08:08:51.861599+11:00"

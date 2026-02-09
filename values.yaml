@@ -132,6 +132,7 @@ health:
 
 hostNetwork:
   enabled: false
+
 addons:
   init:
     enabled: false
@@ -143,6 +144,7 @@ addons:
     securityContext: { }
     volumeMounts: [ ]
   vpn:
+    firewall: {}
     enabled: false
     image:
       repository: ghcr.io/qdm12/gluetun
@@ -150,7 +152,7 @@ addons:
       pullPolicy: Always
     provider:
       name: ""
-      type: ""
+      type: "openvpn"
     openvpn:
       auth: {}
     wireguard: {}
@@ -170,12 +172,26 @@ addons:
       pullPolicy: IfNotPresent
     auth:
       username: postgres
-      password: postgres-password
+      # password: REQUIRED if enabled
       database: postgres
-    securityContext:
-      runAsUser: 999
-      runAsGroup: 999
+      # existingSecret: secret-name
+      # existingSecretKey: postgres-password
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
     persistence:
-      enabled: false
-      size: 10Gi
-      existingClaim: ""
+      enabled: true
+      size: 8Gi
+      # existingClaim: my-pvc
+      # storageClass: standard
+      accessMode: ReadWriteOnce
+      subPath: data
+    # livenessProbe: {}  # Custom liveness probe configuration
+    # readinessProbe: {} # Custom readiness probe configuration
+    additionalEnv: []
+    # - name: POSTGRES_INITDB_ARGS
+    #   value: "--data-checksums"
