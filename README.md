@@ -67,6 +67,10 @@ releases:
                 - homebridge.example.com
 ```
 
+## Known limitations
+
+- AppVersion is not supported, as it is not possible to set it dynamically based on the image tag. It is currently set to the same value as the chart version for all releases.
+
 ## Development
 
 ### Testing

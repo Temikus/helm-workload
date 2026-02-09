@@ -476,6 +476,42 @@
         }
       }
     },
+    "extraContainers": {
+      "type": "array",
+      "description": "Additional sidecar containers to add to the pod",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["name", "image"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Container name"
+          },
+          "image": {
+            "type": "string",
+            "description": "Container image"
+          }
+        }
+      }
+    },
+    "extraVolumes": {
+      "type": "array",
+      "description": "Additional volumes to add to the pod",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Volume name"
+          }
+        }
+      }
+    },
     "addons": {
       "type": "object",
       "required": ["vpn", "init"],
