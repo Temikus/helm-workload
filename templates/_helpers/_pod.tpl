@@ -28,6 +28,10 @@ containers:
   {{- if .Values.addons.postgres.enabled }}
   {{- include "hwl.postgres.sidecar" . | nindent 2 }}
   {{- end }}
+  {{- /* Extra sidecar containers */}}
+  {{- range .Values.extraContainers }}
+  - {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- /* Main application container */}}
   - name: {{ .Chart.Name }}
     {{- include "hwl.container" . | nindent 4 }}
@@ -43,7 +47,7 @@ affinity:
 tolerations:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- if or ((.Values.addons.vpn).enabled) ((.Values.addons.postgres).enabled) ((.Values.volumes).host) }}
+{{- if or ((.Values.addons.vpn).enabled) ((.Values.addons.postgres).enabled) ((.Values.volumes).host) (.Values.extraVolumes) }}
 volumes:
 {{- with .Values.volumes }}
   {{- range .host }}
@@ -64,6 +68,9 @@ volumes:
 {{- end }}
 {{- if ((.Values.addons.postgres).enabled) }}
   {{- include "hwl.postgres.volumes" . | nindent 2 }}
+{{- end }}
+{{- range .Values.extraVolumes }}
+  - {{- toYaml . | nindent 4 }}
 {{- end }}
 {{- end }}
 {{- end }}

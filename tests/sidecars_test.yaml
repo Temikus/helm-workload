@@ -1,0 +1,105 @@
+suite: test extra sidecars
+templates:
+  - deployment.yaml
+  - statefulset.yaml
+tests:
+  - it: should not add extra containers by default
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: workload
+
+  - it: should add extra container to deployment
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      extraContainers:
+        - name: log-collector
+          image: fluent/fluent-bit:latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: log-collector
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: fluent/fluent-bit:latest
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: workload
+
+  - it: should set default-container annotation on deployment
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["kubectl.kubernetes.io/default-container"]
+          value: workload
+
+  - it: should render extra container with extraVolumes
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      extraContainers:
+        - name: log-collector
+          image: fluent/fluent-bit:latest
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log
+      extraVolumes:
+        - name: shared-logs
+          emptyDir: {}
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: shared-logs
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /var/log
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: shared-logs
+      - exists:
+          path: spec.template.spec.volumes[0].emptyDir
+
+  - it: should add extra container to statefulset
+    values:
+      - ../values.yaml
+    template: statefulset.yaml
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+      extraContainers:
+        - name: monitoring-agent
+          image: prom/node-exporter:latest
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: monitoring-agent
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: workload

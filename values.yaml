@@ -92,6 +92,17 @@ persistence:
 volumes:
   host: []
 
+extraContainers: []
+  # - name: log-collector
+  #   image: fluent/fluent-bit:latest
+  #   volumeMounts:
+  #     - name: shared-logs
+  #       mountPath: /var/log
+
+extraVolumes: []
+  # - name: shared-logs
+  #   emptyDir: {}
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
