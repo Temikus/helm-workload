@@ -206,3 +206,46 @@ addons:
     additionalEnv: []
     # - name: POSTGRES_INITDB_ARGS
     #   value: "--data-checksums"
+  cloudflareTunnel:
+    enabled: false
+    # FQDN that Cloudflare will route to this service (REQUIRED when enabled)
+    fqdn: ""
+    # Protocol for the tunnel binding (http, https, tcp)
+    protocol: http
+    # Target port on the service to route traffic to (REQUIRED when enabled)
+    targetPort: ""
+    # Optional: Specific path to forward requests to (e.g., "/webhook")
+    # When set, all tunnel traffic is forwarded to this path on the service
+    # path: ""
+    # Override the service name targeted by the tunnel (defaults to hwl.fullname)
+    serviceName: ""
+    # Optional: CA certificate name in the tunnel's originCaPool to trust for TLS backends
+    # caPool: ""
+    # Optional: Disable TLS verification to backend service
+    # noTlsVerify: false
+    # Reference to an existing tunnel (used when tunnel.create is false)
+    tunnelRef:
+      kind: ClusterTunnel   # or Tunnel
+      name: ""              # REQUIRED if tunnel.create is false
+      disableDNSUpdates: false
+    # Create a new Tunnel/ClusterTunnel resource managed by cloudflare-operator
+    tunnel:
+      create: false
+      kind: ClusterTunnel   # or Tunnel
+      # Name for the new tunnel (defaults to {release-fullname}-tunnel)
+      name: ""
+      # fallbackTarget: http_status:404
+      # noTlsVerify: false
+      cloudflare:
+        accountId: ""       # REQUIRED if tunnel.create is true
+        domain: ""          # REQUIRED if tunnel.create is true
+        email: ""           # REQUIRED if tunnel.create is true
+        credentials: {}
+          # Option 1: Reference an existing Secret (takes precedence)
+          # existingSecret: cloudflare-secrets
+          # Option 2: Provide credentials inline (a Secret will be created)
+          # apiToken: ""    # Recommended - Cloudflare API Token
+          # apiKey: ""      # Not recommended - Cloudflare Global API Key
+    # Optional NetworkPolicy restricting ingress to only the tunnel-bound port (defense-in-depth)
+    networkPolicy:
+      enabled: false

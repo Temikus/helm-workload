@@ -1,0 +1,972 @@
+suite: test cloudflare tunnel addon
+templates:
+  - cloudflare_tunnel.yaml
+tests:
+  # ===========================================================================
+  # Default state: disabled
+  # ===========================================================================
+  - it: should not render any resources when addon is disabled (default)
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ===========================================================================
+  # TunnelBinding only (reference existing tunnel)
+  # ===========================================================================
+  - it: should create a TunnelBinding when enabled with existing tunnel ref
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          tunnelRef:
+            kind: ClusterTunnel
+            name: shared-tunnel
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: TunnelBinding
+      - equal:
+          path: apiVersion
+          value: networking.cfargotunnel.com/v1alpha1
+
+  - it: should set correct TunnelBinding metadata
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: metadata.name
+          value: myrelease-workload
+
+  - it: should set subject with correct service name defaulting to fullname
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].kind
+          value: Service
+      - equal:
+          path: subjects[0].name
+          value: myrelease-workload
+      - equal:
+          path: subjects[0].spec.fqdn
+          value: myapp.example.com
+      - equal:
+          path: subjects[0].spec.protocol
+          value: http
+
+  # ===========================================================================
+  # SECURITY: target URL is explicitly and fully qualified
+  # ===========================================================================
+  - it: "SECURITY: should set explicit target URL locked to service and port"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://myrelease-workload.production.svc.cluster.local:8080"
+
+  - it: "SECURITY: should use https protocol in target URL when specified"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: https
+          targetPort: 8443
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "https://myrelease-workload.production.svc.cluster.local:8443"
+
+  - it: "SECURITY: should use tcp protocol in target URL when specified"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: default
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: db.example.com
+          protocol: tcp
+          targetPort: 5432
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "tcp://myrelease-workload.default.svc.cluster.local:5432"
+
+  - it: "SECURITY: should use custom serviceName in target URL when overridden"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 9090
+          serviceName: my-custom-svc
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].name
+          value: my-custom-svc
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://my-custom-svc.production.svc.cluster.local:9090"
+
+  - it: "should support custom path in target URL"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          path: /webhook
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://myrelease-workload.production.svc.cluster.local:8080/webhook"
+
+  - it: "should support path with https"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: https
+          targetPort: 8443
+          path: /api/v1/webhook
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "https://myrelease-workload.production.svc.cluster.local:8443/api/v1/webhook"
+
+  - it: "should not add trailing slash when path is empty"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://myrelease-workload.production.svc.cluster.local:8080"
+
+  - it: "should combine custom serviceName and path"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          serviceName: backend-api
+          path: /internal/webhook
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://backend-api.production.svc.cluster.local:8080/internal/webhook"
+
+  # ===========================================================================
+  # TunnelRef configuration
+  # ===========================================================================
+  - it: should set tunnelRef with ClusterTunnel kind by default
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: tunnelRef.kind
+          value: ClusterTunnel
+      - equal:
+          path: tunnelRef.name
+          value: shared-tunnel
+      - equal:
+          path: tunnelRef.disableDNSUpdates
+          value: false
+
+  - it: should support Tunnel kind in tunnelRef
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            kind: Tunnel
+            name: ns-tunnel
+    asserts:
+      - equal:
+          path: tunnelRef.kind
+          value: Tunnel
+
+  - it: should support disableDNSUpdates in tunnelRef
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+            disableDNSUpdates: true
+    asserts:
+      - equal:
+          path: tunnelRef.disableDNSUpdates
+          value: true
+
+  # ===========================================================================
+  # Optional TLS fields on TunnelBinding
+  # ===========================================================================
+  - it: should not include caPool or noTlsVerify by default
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - notExists:
+          path: subjects[0].spec.caPool
+      - notExists:
+          path: subjects[0].spec.noTlsVerify
+
+  - it: should include caPool when set
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          caPool: custom-ca.crt
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.caPool
+          value: custom-ca.crt
+
+  - it: should include noTlsVerify when set
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          noTlsVerify: true
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - equal:
+          path: subjects[0].spec.noTlsVerify
+          value: true
+
+  # ===========================================================================
+  # Tunnel creation with existingSecret (no Secret created)
+  # ===========================================================================
+  - it: should create Tunnel + TunnelBinding (no Secret) when using existingSecret
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                existingSecret: my-cf-secret
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: should reference existingSecret in the Tunnel spec
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                existingSecret: my-cf-secret
+    asserts:
+      - isKind:
+          of: ClusterTunnel
+      - equal:
+          path: spec.cloudflare.secret
+          value: my-cf-secret
+
+  - it: should NOT create a Secret when existingSecret is set
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                existingSecret: my-cf-secret
+    asserts:
+      # Only 2 docs: ClusterTunnel + TunnelBinding (no Secret)
+      - hasDocuments:
+          count: 2
+
+  # ===========================================================================
+  # Tunnel creation with inline apiToken (Secret auto-created)
+  # ===========================================================================
+  - it: should create Secret + Tunnel + TunnelBinding when using inline apiToken
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: my-super-secret-token
+    asserts:
+      # 3 docs: Secret + ClusterTunnel + TunnelBinding
+      - hasDocuments:
+          count: 3
+
+  - it: should create a Secret with apiToken in stringData
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: my-super-secret-token
+    asserts:
+      - isKind:
+          of: Secret
+      - equal:
+          path: metadata.name
+          value: myrelease-workload-cf-credentials
+      - equal:
+          path: type
+          value: Opaque
+      - equal:
+          path: stringData.CLOUDFLARE_API_TOKEN
+          value: my-super-secret-token
+
+  - it: should auto-reference the created Secret in the Tunnel spec
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: my-super-secret-token
+    asserts:
+      - isKind:
+          of: ClusterTunnel
+      - equal:
+          path: spec.cloudflare.secret
+          value: myrelease-workload-cf-credentials
+
+  # ===========================================================================
+  # Tunnel creation with inline apiKey (Secret auto-created)
+  # ===========================================================================
+  - it: should create a Secret with apiKey in stringData
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiKey: my-global-api-key
+    asserts:
+      - isKind:
+          of: Secret
+      - equal:
+          path: stringData.CLOUDFLARE_API_KEY
+          value: my-global-api-key
+      - notExists:
+          path: stringData.CLOUDFLARE_API_TOKEN
+
+  - it: should support both apiToken and apiKey in the same Secret
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: my-token
+                apiKey: my-key
+    asserts:
+      - isKind:
+          of: Secret
+      - equal:
+          path: stringData.CLOUDFLARE_API_TOKEN
+          value: my-token
+      - equal:
+          path: stringData.CLOUDFLARE_API_KEY
+          value: my-key
+
+  # ===========================================================================
+  # Secret has standard labels
+  # ===========================================================================
+  - it: should include standard labels on the created Secret
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: my-token
+    asserts:
+      - isKind:
+          of: Secret
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/name"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/instance"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+
+  # ===========================================================================
+  # Tunnel creation: kind and spec details (using inline credentials)
+  # ===========================================================================
+  - it: should create a ClusterTunnel by default when tunnel.create is true
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - isKind:
+          of: ClusterTunnel
+      - equal:
+          path: apiVersion
+          value: networking.cfargotunnel.com/v1alpha2
+
+  - it: should create a Tunnel when tunnel.kind is Tunnel
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            kind: Tunnel
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - isKind:
+          of: Tunnel
+
+  - it: should set correct tunnel metadata and spec
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - equal:
+          path: metadata.name
+          value: myrelease-workload-tunnel
+      - equal:
+          path: spec.cloudflare.accountId
+          value: "abc123"
+      - equal:
+          path: spec.cloudflare.domain
+          value: "example.com"
+      - equal:
+          path: spec.cloudflare.email
+          value: "admin@example.com"
+      - equal:
+          path: spec.cloudflare.secret
+          value: myrelease-workload-cf-credentials
+      - equal:
+          path: spec.newTunnel.name
+          value: myrelease-workload-tunnel
+      - equal:
+          path: spec.fallbackTarget
+          value: "http_status:404"
+      - equal:
+          path: spec.noTlsVerify
+          value: false
+
+  - it: should auto-set tunnelRef.name to created tunnel name
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 2
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - isKind:
+          of: TunnelBinding
+      - equal:
+          path: tunnelRef.name
+          value: myrelease-workload-tunnel
+
+  - it: should NOT create Tunnel when tunnel.create is false
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: existing-tunnel
+          tunnel:
+            create: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: TunnelBinding
+
+  - it: should support custom tunnel name
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            name: my-custom-tunnel
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - equal:
+          path: spec.newTunnel.name
+          value: my-custom-tunnel
+
+  # ===========================================================================
+  # NetworkPolicy
+  # ===========================================================================
+  - it: should NOT create NetworkPolicy by default
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should create NetworkPolicy when networkPolicy.enabled is true
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          networkPolicy:
+            enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: "SECURITY: NetworkPolicy should restrict ingress to only the target port"
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          networkPolicy:
+            enabled: true
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: apiVersion
+          value: networking.k8s.io/v1
+      - equal:
+          path: metadata.name
+          value: myrelease-workload-cf-tunnel
+      - contains:
+          path: spec.policyTypes
+          content: Ingress
+      - equal:
+          path: spec.ingress[0].ports[0].protocol
+          value: TCP
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8080
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/name"]
+          value: workload
+
+  - it: should create all 4 resources when tunnel.create (inline creds) and networkPolicy.enabled
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+          networkPolicy:
+            enabled: true
+    asserts:
+      # Secret + ClusterTunnel + TunnelBinding + NetworkPolicy
+      - hasDocuments:
+          count: 4
+
+  - it: should create 3 resources when tunnel.create (existingSecret) and networkPolicy.enabled
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                existingSecret: my-secret
+          networkPolicy:
+            enabled: true
+    asserts:
+      # ClusterTunnel + TunnelBinding + NetworkPolicy (no Secret)
+      - hasDocuments:
+          count: 3
+
+  # ===========================================================================
+  # Labels are applied consistently
+  # ===========================================================================
+  - it: should include standard labels on TunnelBinding
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/name"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/instance"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
