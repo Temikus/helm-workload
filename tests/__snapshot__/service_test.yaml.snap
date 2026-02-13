@@ -7,8 +7,8 @@ should match basic snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.1.0
-        helm.sh/chart: workload-1.1.0
+        app.kubernetes.io/version: 1.2.0
+        helm.sh/chart: workload-1.2.0
       name: RELEASE-NAME-workload
     spec:
       replicas: 1
@@ -25,7 +25,7 @@ should match basic snapshot:
             app.kubernetes.io/name: workload
         spec:
           containers:
-            - image: nginx:1.1.0
+            - image: nginx:1.2.0
               imagePullPolicy: IfNotPresent
               name: workload
               ports:
@@ -48,8 +48,8 @@ should match basic snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.1.0
-        helm.sh/chart: workload-1.1.0
+        app.kubernetes.io/version: 1.2.0
+        helm.sh/chart: workload-1.2.0
       name: foo-RELEASE-NAME-workload
     spec:
       ports:
@@ -69,8 +69,8 @@ should match basic snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.1.0
-        helm.sh/chart: workload-1.1.0
+        app.kubernetes.io/version: 1.2.0
+        helm.sh/chart: workload-1.2.0
       name: bar-RELEASE-NAME-workload
     spec:
       ports:
@@ -90,8 +90,8 @@ should match basic snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.1.0
-        helm.sh/chart: workload-1.1.0
+        app.kubernetes.io/version: 1.2.0
+        helm.sh/chart: workload-1.2.0
       name: baz-RELEASE-NAME-workload
     spec:
       ports:

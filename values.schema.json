@@ -766,6 +766,147 @@
             }
           }
         },
+        "cloudflareTunnel": {
+          "type": "object",
+          "description": "Cloudflare Tunnel addon - creates Tunnel/ClusterTunnel and TunnelBinding resources via cloudflare-operator",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable Cloudflare Tunnel addon"
+            },
+            "fqdn": {
+              "type": "string",
+              "description": "FQDN that Cloudflare will route to this service (required when enabled)"
+            },
+            "protocol": {
+              "type": "string",
+              "enum": ["http", "https", "tcp"],
+              "default": "http",
+              "description": "Protocol for the tunnel binding"
+            },
+            "targetPort": {
+              "type": ["integer", "string"],
+              "description": "Target port on the service to route traffic to (required when enabled)"
+            },
+            "path": {
+              "type": "string",
+              "description": "Optional path to forward tunnel requests to (e.g., '/webhook'). When set, all traffic is forwarded to this path on the service."
+            },
+            "serviceName": {
+              "type": "string",
+              "description": "Override the service name targeted by the tunnel (defaults to release fullname)"
+            },
+            "caPool": {
+              "type": "string",
+              "description": "CA certificate name in the tunnel's originCaPool to trust for TLS backends"
+            },
+            "noTlsVerify": {
+              "type": "boolean",
+              "default": false,
+              "description": "Disable TLS verification to backend service"
+            },
+            "tunnelRef": {
+              "type": "object",
+              "description": "Reference to an existing Tunnel or ClusterTunnel (used when tunnel.create is false)",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["Tunnel", "ClusterTunnel"],
+                  "default": "ClusterTunnel",
+                  "description": "Kind of the tunnel resource to reference"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the existing tunnel resource (required when tunnel.create is false)"
+                },
+                "disableDNSUpdates": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Disable automatic DNS record updates by the controller"
+                }
+              }
+            },
+            "tunnel": {
+              "type": "object",
+              "description": "Configuration for creating a new Tunnel/ClusterTunnel resource",
+              "properties": {
+                "create": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Create a new Tunnel/ClusterTunnel resource"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["Tunnel", "ClusterTunnel"],
+                  "default": "ClusterTunnel",
+                  "description": "Kind of the tunnel resource to create"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name for the new tunnel (defaults to release-fullname-tunnel)"
+                },
+                "fallbackTarget": {
+                  "type": "string",
+                  "default": "http_status:404",
+                  "description": "Default service to point cloudflared to when no route matches"
+                },
+                "noTlsVerify": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Disable TLS verification to backend services globally"
+                },
+                "cloudflare": {
+                  "type": "object",
+                  "description": "Cloudflare account configuration",
+                  "properties": {
+                    "accountId": {
+                      "type": "string",
+                      "description": "Cloudflare account ID (required when tunnel.create is true)"
+                    },
+                    "domain": {
+                      "type": "string",
+                      "description": "Domain where the tunnel runs (required when tunnel.create is true)"
+                    },
+                    "email": {
+                      "type": "string",
+                      "description": "Email address for Cloudflare login (required when tunnel.create is true)"
+                    },
+                    "credentials": {
+                      "type": "object",
+                      "description": "Cloudflare API credentials. Provide either existingSecret to reference a pre-created Secret, or apiToken/apiKey to have the chart create one.",
+                      "properties": {
+                        "existingSecret": {
+                          "type": "string",
+                          "description": "Name of an existing Kubernetes Secret containing Cloudflare API credentials. When set, no Secret is created by the chart."
+                        },
+                        "apiToken": {
+                          "type": "string",
+                          "description": "Cloudflare API Token (recommended). A Secret will be created containing this value. Ignored if existingSecret is set."
+                        },
+                        "apiKey": {
+                          "type": "string",
+                          "description": "Cloudflare Global API Key (not recommended). A Secret will be created containing this value. Ignored if existingSecret is set."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "networkPolicy": {
+              "type": "object",
+              "description": "Optional NetworkPolicy restricting ingress to only the tunnel-bound port",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Create a NetworkPolicy that only allows ingress on the tunnel-bound port"
+                }
+              }
+            }
+          }
+        },
         "postgres": {
           "type": "object",
           "properties": {

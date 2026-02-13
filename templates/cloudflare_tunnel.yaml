@@ -1,0 +1,15 @@
+{{- if ((.Values.addons.cloudflareTunnel).enabled) }}
+{{- if ((.Values.addons.cloudflareTunnel).tunnel).create }}
+{{- if not (dig "tunnel" "cloudflare" "credentials" "existingSecret" "" .Values.addons.cloudflareTunnel) }}
+{{- include "hwl.cloudflareTunnel.secret" . }}
+---
+{{- end }}
+{{- include "hwl.cloudflareTunnel.tunnel" . }}
+---
+{{- end }}
+{{- include "hwl.cloudflareTunnel.tunnelBinding" . }}
+{{- if ((.Values.addons.cloudflareTunnel).networkPolicy).enabled }}
+---
+{{- include "hwl.cloudflareTunnel.networkPolicy" . }}
+{{- end }}
+{{- end }}
