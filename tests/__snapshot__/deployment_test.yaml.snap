@@ -1,7 +1,7 @@
 pod spec should match snapshot:
   1: |
     containers:
-      - image: nginx:1.3.1
+      - image: nginx:test
         imagePullPolicy: IfNotPresent
         name: workload
         ports: null
