@@ -73,9 +73,11 @@ Cloudflare TunnelBinding resource
 Binds a Service to a Tunnel/ClusterTunnel.
 
 SECURITY: The target field is always explicitly set to the full
-protocol://service.namespace.svc.cluster.local:port/path URL. This ensures
-the tunnel can ONLY reach the designated service, port, and path -- no other
-services, ports, or paths in the cluster are reachable through this binding.
+protocol://service.namespace.svc.cluster.local:port URL. This ensures
+the tunnel can ONLY reach the designated service and port -- no other
+services or ports in the cluster are reachable through this binding.
+When pathFilter is enabled, traffic is routed through the path-filter
+proxy Service which only allows configured paths.
 */}}
 {{- define "hwl.cloudflareTunnel.tunnelBinding" -}}
 {{- $cf := .Values.addons.cloudflareTunnel -}}
@@ -83,12 +85,22 @@ services, ports, or paths in the cluster are reachable through this binding.
 {{- $serviceName := ($cf.serviceName | default (include "hwl.fullname" .)) -}}
 {{- $protocol := ($cf.protocol | default "http") -}}
 {{- $targetPort := (required "addons.cloudflareTunnel.targetPort is required" $cf.targetPort) -}}
-{{- $path := ($cf.path | default "") -}}
 {{- $tunnelRefName := "" -}}
+{{- $tunnelRefKind := "" -}}
 {{- if $cf.tunnel.create -}}
   {{- $tunnelRefName = (printf "%s-tunnel" (include "hwl.fullname" .)) -}}
+  {{- $tunnelRefKind = ($cf.tunnel.kind | default "ClusterTunnel") -}}
 {{- else -}}
   {{- $tunnelRefName = (required "addons.cloudflareTunnel.tunnelRef.name is required when tunnel.create is false" $cf.tunnelRef.name) -}}
+  {{- $tunnelRefKind = ($cf.tunnelRef.kind | default "ClusterTunnel") -}}
+{{- end -}}
+{{- $pf := ($cf.pathFilter | default dict) -}}
+{{- $pfEnabled := ($pf.enabled | default false) -}}
+{{- $targetServiceName := $serviceName -}}
+{{- $targetServicePort := $targetPort -}}
+{{- if $pfEnabled -}}
+  {{- $targetServiceName = (printf "%s-cf-path-filter" (include "hwl.fullname" .)) -}}
+  {{- $targetServicePort = ($pf.port | default 8880) -}}
 {{- end -}}
 apiVersion: networking.cfargotunnel.com/v1alpha1
 kind: TunnelBinding
@@ -98,11 +110,11 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 subjects:
   - kind: Service
-    name: {{ $serviceName }}
+    name: {{ $targetServiceName }}
     spec:
       fqdn: {{ required "addons.cloudflareTunnel.fqdn is required" $cf.fqdn }}
       protocol: {{ $protocol }}
-      target: "{{ $protocol }}://{{ $serviceName }}.{{ .Release.Namespace }}.svc.cluster.local:{{ $targetPort }}{{ $path }}"
+      target: "{{ $protocol }}://{{ $targetServiceName }}.{{ .Release.Namespace }}.svc.cluster.local:{{ $targetServicePort }}"
       {{- if $cf.caPool }}
       caPool: {{ $cf.caPool }}
       {{- end }}
@@ -110,7 +122,7 @@ subjects:
       noTlsVerify: {{ $cf.noTlsVerify }}
       {{- end }}
 tunnelRef:
-  kind: {{ $cf.tunnelRef.kind | default "ClusterTunnel" }}
+  kind: {{ $tunnelRefKind }}
   name: {{ $tunnelRefName }}
   disableDNSUpdates: {{ $cf.tunnelRef.disableDNSUpdates | default false }}
 {{- end }}
@@ -143,4 +155,88 @@ spec:
         - protocol: TCP
           port: {{ $cf.targetPort }}
 {{- end }}
+{{- end }}
+
+{{/*
+Cloudflare Tunnel path-filter ConfigMap
+Creates an nginx configuration that only allows traffic to specified paths,
+returning 403 for everything else.
+*/}}
+{{- define "hwl.cloudflareTunnel.pathFilter.configMap" -}}
+{{- $cf := .Values.addons.cloudflareTunnel -}}
+{{- $pf := $cf.pathFilter -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hwl.fullname" . }}-cf-path-filter
+  labels:
+    {{- include "hwl.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    server {
+        listen {{ $pf.port | default 8880 }};
+        {{- range $pf.paths }}
+        location {{ . }} {
+            proxy_pass http://127.0.0.1:{{ $cf.targetPort }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        {{- end }}
+        location / {
+            return 403;
+        }
+    }
+{{- end }}
+
+{{/*
+Cloudflare Tunnel path-filter sidecar container
+Runs nginx to filter requests by path before forwarding to the main container.
+*/}}
+{{- define "hwl.cloudflareTunnel.pathFilter.sidecar" -}}
+{{- $cf := .Values.addons.cloudflareTunnel -}}
+{{- $pf := $cf.pathFilter -}}
+{{- $image := ($pf.image | default dict) -}}
+- name: cf-path-filter
+  image: "{{ $image.repository | default "nginx" }}:{{ $image.tag | default "alpine" }}"
+  ports:
+    - containerPort: {{ $pf.port | default 8880 }}
+      protocol: TCP
+  volumeMounts:
+    - name: cf-path-filter-config
+      mountPath: /etc/nginx/conf.d
+{{- end }}
+
+{{/*
+Cloudflare Tunnel path-filter volume
+Mounts the nginx ConfigMap.
+*/}}
+{{- define "hwl.cloudflareTunnel.pathFilter.volumes" -}}
+- name: cf-path-filter-config
+  configMap:
+    name: {{ include "hwl.fullname" . }}-cf-path-filter
+{{- end }}
+
+{{/*
+Cloudflare Tunnel path-filter Service
+Creates a dedicated Service for the path-filter proxy, selecting the same pods
+as the main workload. This avoids modifying the main Service template.
+*/}}
+{{- define "hwl.cloudflareTunnel.pathFilter.service" -}}
+{{- $cf := .Values.addons.cloudflareTunnel -}}
+{{- $pf := $cf.pathFilter -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hwl.fullname" . }}-cf-path-filter
+  labels:
+    {{- include "hwl.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "hwl.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ $pf.port | default 8880 }}
+      targetPort: {{ $pf.port | default 8880 }}
+      protocol: TCP
+      name: cf-path-filter
 {{- end }}

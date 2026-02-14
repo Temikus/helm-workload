@@ -1,6 +1,7 @@
 suite: test cloudflare tunnel addon
 templates:
   - cloudflare_tunnel.yaml
+  - deployment.yaml
 tests:
   # ===========================================================================
   # Default state: disabled
@@ -178,94 +179,6 @@ tests:
       - equal:
           path: subjects[0].spec.target
           value: "http://my-custom-svc.production.svc.cluster.local:9090"
-
-  - it: "should support custom path in target URL"
-    values:
-      - ../values.yaml
-    template: cloudflare_tunnel.yaml
-    release:
-      name: myrelease
-      namespace: production
-    set:
-      addons:
-        cloudflareTunnel:
-          enabled: true
-          fqdn: myapp.example.com
-          protocol: http
-          targetPort: 8080
-          path: /webhook
-          tunnelRef:
-            name: shared-tunnel
-    asserts:
-      - equal:
-          path: subjects[0].spec.target
-          value: "http://myrelease-workload.production.svc.cluster.local:8080/webhook"
-
-  - it: "should support path with https"
-    values:
-      - ../values.yaml
-    template: cloudflare_tunnel.yaml
-    release:
-      name: myrelease
-      namespace: production
-    set:
-      addons:
-        cloudflareTunnel:
-          enabled: true
-          fqdn: myapp.example.com
-          protocol: https
-          targetPort: 8443
-          path: /api/v1/webhook
-          tunnelRef:
-            name: shared-tunnel
-    asserts:
-      - equal:
-          path: subjects[0].spec.target
-          value: "https://myrelease-workload.production.svc.cluster.local:8443/api/v1/webhook"
-
-  - it: "should not add trailing slash when path is empty"
-    values:
-      - ../values.yaml
-    template: cloudflare_tunnel.yaml
-    release:
-      name: myrelease
-      namespace: production
-    set:
-      addons:
-        cloudflareTunnel:
-          enabled: true
-          fqdn: myapp.example.com
-          protocol: http
-          targetPort: 8080
-          tunnelRef:
-            name: shared-tunnel
-    asserts:
-      - equal:
-          path: subjects[0].spec.target
-          value: "http://myrelease-workload.production.svc.cluster.local:8080"
-
-  - it: "should combine custom serviceName and path"
-    values:
-      - ../values.yaml
-    template: cloudflare_tunnel.yaml
-    release:
-      name: myrelease
-      namespace: production
-    set:
-      addons:
-        cloudflareTunnel:
-          enabled: true
-          fqdn: myapp.example.com
-          protocol: http
-          targetPort: 8080
-          serviceName: backend-api
-          path: /internal/webhook
-          tunnelRef:
-            name: shared-tunnel
-    asserts:
-      - equal:
-          path: subjects[0].spec.target
-          value: "http://backend-api.production.svc.cluster.local:8080/internal/webhook"
 
   # ===========================================================================
   # TunnelRef configuration
@@ -775,6 +688,86 @@ tests:
           path: tunnelRef.name
           value: myrelease-workload-tunnel
 
+  - it: should set tunnelRef.kind to ClusterTunnel when tunnel.kind is ClusterTunnel
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 2
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            kind: ClusterTunnel
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - isKind:
+          of: TunnelBinding
+      - equal:
+          path: tunnelRef.kind
+          value: ClusterTunnel
+
+  - it: should set tunnelRef.kind to Tunnel when tunnel.kind is Tunnel
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 2
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            kind: Tunnel
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - isKind:
+          of: TunnelBinding
+      - equal:
+          path: tunnelRef.kind
+          value: Tunnel
+
+  - it: should default tunnelRef.kind to ClusterTunnel when tunnel.kind is not set
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 2
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+    asserts:
+      - isKind:
+          of: TunnelBinding
+      - equal:
+          path: tunnelRef.kind
+          value: ClusterTunnel
+
   - it: should NOT create Tunnel when tunnel.create is false
     values:
       - ../values.yaml
@@ -970,3 +963,303 @@ tests:
           path: metadata.labels["app.kubernetes.io/instance"]
       - exists:
           path: metadata.labels["app.kubernetes.io/managed-by"]
+
+  # ===========================================================================
+  # Path filter: ConfigMap
+  # ===========================================================================
+  - it: should create pathFilter ConfigMap with correct nginx config
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+              - /api/v1
+            port: 8880
+    asserts:
+      - hasDocuments:
+          count: 3
+      - isKind:
+          of: ConfigMap
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: myrelease-workload-cf-path-filter
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "listen 8880"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "location /webhook"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "location /api/v1"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "proxy_pass http://127\\.0\\.0\\.1:8080"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "location / \\{\\s*\n\\s*return 403"
+        documentIndex: 1
+
+  # ===========================================================================
+  # Path filter: Service
+  # ===========================================================================
+  - it: should create pathFilter Service with correct selector and port
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+            port: 8880
+    asserts:
+      - isKind:
+          of: Service
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: myrelease-workload-cf-path-filter
+        documentIndex: 2
+      - equal:
+          path: spec.type
+          value: ClusterIP
+        documentIndex: 2
+      - equal:
+          path: spec.ports[0].port
+          value: 8880
+        documentIndex: 2
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8880
+        documentIndex: 2
+      - equal:
+          path: spec.ports[0].name
+          value: cf-path-filter
+        documentIndex: 2
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: workload
+        documentIndex: 2
+
+  # ===========================================================================
+  # Path filter: TunnelBinding target
+  # ===========================================================================
+  - it: should point TunnelBinding target to pathFilter Service when pathFilter enabled
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+            port: 8880
+    asserts:
+      - isKind:
+          of: TunnelBinding
+        documentIndex: 0
+      - equal:
+          path: subjects[0].name
+          value: myrelease-workload-cf-path-filter
+        documentIndex: 0
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://myrelease-workload-cf-path-filter.production.svc.cluster.local:8880"
+        documentIndex: 0
+
+  - it: should point TunnelBinding target to main service when pathFilter disabled
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    release:
+      name: myrelease
+      namespace: production
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          protocol: http
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - isKind:
+          of: TunnelBinding
+      - equal:
+          path: subjects[0].name
+          value: myrelease-workload
+      - equal:
+          path: subjects[0].spec.target
+          value: "http://myrelease-workload.production.svc.cluster.local:8080"
+
+  # ===========================================================================
+  # Path filter: document count
+  # ===========================================================================
+  - it: should have correct document count with pathFilter and networkPolicy
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+          networkPolicy:
+            enabled: true
+    asserts:
+      # TunnelBinding + NetworkPolicy + ConfigMap + Service = 4
+      - hasDocuments:
+          count: 4
+
+  - it: should have correct document count with tunnel.create and pathFilter
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+    asserts:
+      # Secret + ClusterTunnel + TunnelBinding + ConfigMap + Service = 5
+      - hasDocuments:
+          count: 5
+
+  # ===========================================================================
+  # Path filter: sidecar injection into pod
+  # ===========================================================================
+  - it: should inject pathFilter sidecar into deployment
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+            port: 8880
+            image:
+              repository: nginx
+              tag: alpine
+    asserts:
+      - contains:
+          path: spec.template.spec.containers
+          content:
+            name: cf-path-filter
+            image: "nginx:alpine"
+            ports:
+              - containerPort: 8880
+                protocol: TCP
+            volumeMounts:
+              - name: cf-path-filter-config
+                mountPath: /etc/nginx/conf.d
+
+  - it: should inject pathFilter volume into deployment
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    release:
+      name: myrelease
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cf-path-filter-config
+            configMap:
+              name: myrelease-workload-cf-path-filter
+
+  - it: should not inject pathFilter sidecar when pathFilter is disabled
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
