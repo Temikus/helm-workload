@@ -12,4 +12,10 @@
 ---
 {{- include "hwl.cloudflareTunnel.networkPolicy" . }}
 {{- end }}
+{{- if ((.Values.addons.cloudflareTunnel).pathFilter).enabled }}
+---
+{{- include "hwl.cloudflareTunnel.pathFilter.configMap" . }}
+---
+{{- include "hwl.cloudflareTunnel.pathFilter.service" . }}
+{{- end }}
 {{- end }}

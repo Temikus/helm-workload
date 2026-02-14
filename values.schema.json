@@ -789,9 +789,43 @@
               "type": ["integer", "string"],
               "description": "Target port on the service to route traffic to (required when enabled)"
             },
-            "path": {
-              "type": "string",
-              "description": "Optional path to forward tunnel requests to (e.g., '/webhook'). When set, all traffic is forwarded to this path on the service."
+            "pathFilter": {
+              "type": "object",
+              "description": "Path filter restricts which paths are exposed through the tunnel using an nginx sidecar proxy",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable path filtering via nginx sidecar proxy"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "List of paths to allow through the tunnel (e.g., ['/webhook', '/api/v1'])"
+                },
+                "port": {
+                  "type": "integer",
+                  "default": 8880,
+                  "description": "Port the nginx path-filter proxy listens on"
+                },
+                "image": {
+                  "type": "object",
+                  "properties": {
+                    "repository": {
+                      "type": "string",
+                      "default": "nginx",
+                      "description": "Nginx image repository"
+                    },
+                    "tag": {
+                      "type": "string",
+                      "default": "alpine",
+                      "description": "Nginx image tag"
+                    }
+                  }
+                }
+              }
             },
             "serviceName": {
               "type": "string",

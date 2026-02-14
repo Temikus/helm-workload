@@ -214,9 +214,17 @@ addons:
     protocol: http
     # Target port on the service to route traffic to (REQUIRED when enabled)
     targetPort: ""
-    # Optional: Specific path to forward requests to (e.g., "/webhook")
-    # When set, all tunnel traffic is forwarded to this path on the service
-    # path: ""
+    # Path filter: restrict which paths are exposed through the tunnel.
+    # Uses an nginx sidecar proxy that returns 403 for non-matching paths.
+    pathFilter:
+      enabled: false
+      # paths:
+      #   - /webhook
+      #   - /api/v1
+      port: 8880
+      image:
+        repository: nginx
+        tag: alpine
     # Override the service name targeted by the tunnel (defaults to hwl.fullname)
     serviceName: ""
     # Optional: CA certificate name in the tunnel's originCaPool to trust for TLS backends
