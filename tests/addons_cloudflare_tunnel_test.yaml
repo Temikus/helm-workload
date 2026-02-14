@@ -1015,6 +1015,18 @@ tests:
         documentIndex: 1
       - matchRegex:
           path: data["nginx.conf"]
+          pattern: "server_tokens off"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "X-Forwarded-For"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
+          pattern: "X-Forwarded-Proto"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
           pattern: "location / \\{\\s*\n\\s*return 403"
         documentIndex: 1
 
@@ -1214,14 +1226,32 @@ tests:
           content:
             name: cf-path-filter
             image: "nginx:alpine"
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 101
+              runAsGroup: 101
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
             ports:
               - containerPort: 8880
                 protocol: TCP
+            livenessProbe:
+              tcpSocket:
+                port: 8880
+              initialDelaySeconds: 2
+              periodSeconds: 10
             volumeMounts:
               - name: cf-path-filter-config
                 mountPath: /etc/nginx/conf.d
+                readOnly: true
+              - name: cf-path-filter-cache
+                mountPath: /var/cache/nginx
+              - name: cf-path-filter-run
+                mountPath: /var/run
+              - name: cf-path-filter-log
+                mountPath: /var/log/nginx
 
-  - it: should inject pathFilter volume into deployment
+  - it: should inject pathFilter volumes into deployment
     values:
       - ../values.yaml
     template: deployment.yaml
@@ -1246,6 +1276,39 @@ tests:
             name: cf-path-filter-config
             configMap:
               name: myrelease-workload-cf-path-filter
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cf-path-filter-cache
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cf-path-filter-run
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: cf-path-filter-log
+            emptyDir: {}
+
+  - it: should fail when pathFilter is enabled but paths is empty
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          pathFilter:
+            enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "addons.cloudflareTunnel.pathFilter.paths is required when pathFilter.enabled is true"
 
   - it: should not inject pathFilter sidecar when pathFilter is disabled
     values:
