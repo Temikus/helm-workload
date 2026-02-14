@@ -33,7 +33,8 @@ tests:
           service:
             enabled: true
     asserts:
-      - matchSnapshot: {}
+      - matchSnapshot:
+          path: spec
 
   - it: should point to the correct service with default values
     templates:

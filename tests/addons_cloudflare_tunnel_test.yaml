@@ -1019,6 +1019,10 @@ tests:
         documentIndex: 1
       - matchRegex:
           path: data["nginx.conf"]
+          pattern: "access_log /dev/stdout security"
+        documentIndex: 1
+      - matchRegex:
+          path: data["nginx.conf"]
           pattern: "X-Forwarded-For"
         documentIndex: 1
       - matchRegex:

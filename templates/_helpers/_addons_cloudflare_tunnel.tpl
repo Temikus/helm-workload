@@ -180,9 +180,11 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 data:
   nginx.conf: |
+    log_format security '$remote_addr - [$time_local] "$request_method $uri" $status';
     server {
         listen {{ $pf.port | default 8880 }};
         server_tokens off;
+        access_log /dev/stdout security;
         {{- range $pf.paths }}
         location {{ . }} {
             proxy_pass http://127.0.0.1:{{ $cf.targetPort }};

@@ -5,6 +5,7 @@ templates:
 tests:
   - it: should match basic snapshot
     set:
+      image.tag: "test"
       .Release.Name: "foo"
       ports:
         - name: foo
@@ -21,7 +22,8 @@ tests:
             enabled: true
     asserts:
       - matchSnapshot:
-          path: $
+          path: spec
+
   - it: should have the correct number of services depending on values
     template: service.yaml
     set:

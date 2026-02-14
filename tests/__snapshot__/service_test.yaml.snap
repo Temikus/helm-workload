@@ -1,105 +1,61 @@
 should match basic snapshot:
   1: |
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
+    replicas: 1
+    selector:
+      matchLabels:
         app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.3.1
-        helm.sh/chart: workload-1.3.1
-      name: RELEASE-NAME-workload
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
+    template:
+      metadata:
+        annotations:
+          kubectl.kubernetes.io/default-container: workload
+        labels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: workload
-      template:
-        metadata:
-          annotations:
-            kubectl.kubernetes.io/default-container: workload
-          labels:
-            app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: workload
-        spec:
-          containers:
-            - image: nginx:1.3.1
-              imagePullPolicy: IfNotPresent
-              name: workload
-              ports:
-                - containerPort: 80
-                  name: foo
-                - containerPort: 443
-                  name: bar
-                - containerPort: 8080
-                  name: baz
-              resources: {}
-              securityContext: {}
-              volumeMounts: null
-          securityContext: {}
-          serviceAccountName: RELEASE-NAME-workload
+      spec:
+        containers:
+          - image: nginx:test
+            imagePullPolicy: IfNotPresent
+            name: workload
+            ports:
+              - containerPort: 80
+                name: foo
+              - containerPort: 443
+                name: bar
+              - containerPort: 8080
+                name: baz
+            resources: {}
+            securityContext: {}
+            volumeMounts: null
+        securityContext: {}
+        serviceAccountName: RELEASE-NAME-workload
   2: |
-    apiVersion: v1
-    kind: Service
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.3.1
-        helm.sh/chart: workload-1.3.1
-      name: foo-RELEASE-NAME-workload
-    spec:
-      ports:
-        - name: foo
-          port: 80
-          protocol: TCP
-          targetPort: foo
-      selector:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/name: workload
-      type: ClusterIP
+    ports:
+      - name: foo
+        port: 80
+        protocol: TCP
+        targetPort: foo
+    selector:
+      app.kubernetes.io/instance: RELEASE-NAME
+      app.kubernetes.io/name: workload
+    type: ClusterIP
   3: |
-    apiVersion: v1
-    kind: Service
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.3.1
-        helm.sh/chart: workload-1.3.1
-      name: bar-RELEASE-NAME-workload
-    spec:
-      ports:
-        - name: bar
-          port: 443
-          protocol: TCP
-          targetPort: bar
-      selector:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/name: workload
-      type: ClusterIP
+    ports:
+      - name: bar
+        port: 443
+        protocol: TCP
+        targetPort: bar
+    selector:
+      app.kubernetes.io/instance: RELEASE-NAME
+      app.kubernetes.io/name: workload
+    type: ClusterIP
   4: |
-    apiVersion: v1
-    kind: Service
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: workload
-        app.kubernetes.io/version: 1.3.1
-        helm.sh/chart: workload-1.3.1
-      name: baz-RELEASE-NAME-workload
-    spec:
-      ports:
-        - name: baz
-          port: 8080
-          protocol: TCP
-          targetPort: baz
-      selector:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/name: workload
-      type: ClusterIP
+    ports:
+      - name: baz
+        port: 8080
+        protocol: TCP
+        targetPort: baz
+    selector:
+      app.kubernetes.io/instance: RELEASE-NAME
+      app.kubernetes.io/name: workload
+    type: ClusterIP

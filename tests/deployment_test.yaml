@@ -20,6 +20,8 @@ tests:
           path: spec.template.spec.containers[0].image
           value: nginx:latest
   - it: pod spec should match snapshot
+    set:
+      image.tag: "test"
     asserts:
       - matchSnapshot:
           path: spec.template.spec
