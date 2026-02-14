@@ -161,10 +161,17 @@ spec:
 Cloudflare Tunnel path-filter ConfigMap
 Creates an nginx configuration that only allows traffic to specified paths,
 returning 403 for everything else.
+
+NOTE: nginx must listen on 0.0.0.0 (not 127.0.0.1) because the
+cf-path-filter Service routes traffic to the pod via its podIP.
+Restrict cluster-level access to this proxy using networkPolicy if needed.
 */}}
 {{- define "hwl.cloudflareTunnel.pathFilter.configMap" -}}
 {{- $cf := .Values.addons.cloudflareTunnel -}}
 {{- $pf := $cf.pathFilter -}}
+{{- if not $pf.paths -}}
+  {{- fail "addons.cloudflareTunnel.pathFilter.paths is required when pathFilter.enabled is true" -}}
+{{- end -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -175,11 +182,14 @@ data:
   nginx.conf: |
     server {
         listen {{ $pf.port | default 8880 }};
+        server_tokens off;
         {{- range $pf.paths }}
         location {{ . }} {
             proxy_pass http://127.0.0.1:{{ $cf.targetPort }};
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
         }
         {{- end }}
         location / {
@@ -191,6 +201,7 @@ data:
 {{/*
 Cloudflare Tunnel path-filter sidecar container
 Runs nginx to filter requests by path before forwarding to the main container.
+Hardened: non-root, read-only root filesystem, no privilege escalation.
 */}}
 {{- define "hwl.cloudflareTunnel.pathFilter.sidecar" -}}
 {{- $cf := .Values.addons.cloudflareTunnel -}}
@@ -198,22 +209,46 @@ Runs nginx to filter requests by path before forwarding to the main container.
 {{- $image := ($pf.image | default dict) -}}
 - name: cf-path-filter
   image: "{{ $image.repository | default "nginx" }}:{{ $image.tag | default "alpine" }}"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
   ports:
     - containerPort: {{ $pf.port | default 8880 }}
       protocol: TCP
+  livenessProbe:
+    tcpSocket:
+      port: {{ $pf.port | default 8880 }}
+    initialDelaySeconds: 2
+    periodSeconds: 10
   volumeMounts:
     - name: cf-path-filter-config
       mountPath: /etc/nginx/conf.d
+      readOnly: true
+    - name: cf-path-filter-cache
+      mountPath: /var/cache/nginx
+    - name: cf-path-filter-run
+      mountPath: /var/run
+    - name: cf-path-filter-log
+      mountPath: /var/log/nginx
 {{- end }}
 
 {{/*
-Cloudflare Tunnel path-filter volume
-Mounts the nginx ConfigMap.
+Cloudflare Tunnel path-filter volumes
+ConfigMap for nginx config plus writable dirs needed with readOnlyRootFilesystem.
 */}}
 {{- define "hwl.cloudflareTunnel.pathFilter.volumes" -}}
 - name: cf-path-filter-config
   configMap:
     name: {{ include "hwl.fullname" . }}-cf-path-filter
+- name: cf-path-filter-cache
+  emptyDir: {}
+- name: cf-path-filter-run
+  emptyDir: {}
+- name: cf-path-filter-log
+  emptyDir: {}
 {{- end }}
 
 {{/*
