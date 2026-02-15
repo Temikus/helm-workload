@@ -180,7 +180,7 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 data:
   nginx.conf: |
-    log_format security '$remote_addr - [$time_local] "$request_method $uri" $status';
+    log_format security '[$time_local] $remote_addr - $http_x_real_ip - $http_x_forwarded_for - "$request_method $uri" $status';
     server {
         listen {{ $pf.port | default 8880 }};
         server_tokens off;
