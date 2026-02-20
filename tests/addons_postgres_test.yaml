@@ -3,22 +3,73 @@ templates:
   - deployment.yaml
   - statefulset.yaml
   - pvc.yaml
+  - postgres.yaml
 tests:
-  - it: should not add postgres sidecar to deployment by default
+  - it: should not create postgres deployment by default
     values:
       - ../values.yaml
-    template: deployment.yaml
+    template: postgres.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create a separate postgres Deployment when enabled
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 0
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
     asserts:
       - isKind:
           of: Deployment
-      - lengthEqual:
-          path: spec.template.spec.containers
-          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-workload-postgres
       - equal:
           path: spec.template.spec.containers[0].name
-          value: workload
+          value: postgres
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: postgres:15-alpine
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
 
-  - it: should add postgres sidecar to deployment when enabled
+  - it: should create a postgres Service when enabled
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 1
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-workload-postgres
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 5432
+      - equal:
+          path: spec.ports[0].targetPort
+          value: postgres
+
+  - it: should NOT add postgres container to main deployment when enabled
     values:
       - ../values.yaml
     template: deployment.yaml
@@ -34,18 +85,12 @@ tests:
           of: Deployment
       - lengthEqual:
           path: spec.template.spec.containers
-          count: 2
+          count: 1
       - equal:
           path: spec.template.spec.containers[0].name
-          value: postgres
-      - equal:
-          path: spec.template.spec.containers[1].name
           value: workload
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: postgres:15-alpine
 
-  - it: should add postgres sidecar to statefulset when enabled
+  - it: should NOT add postgres container to statefulset when enabled
     values:
       - ../values.yaml
     template: statefulset.yaml
@@ -62,17 +107,18 @@ tests:
     asserts:
       - isKind:
           of: StatefulSet
-      - equal:
-          path: spec.template.spec.containers[1].name
-          value: workload
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
       - equal:
           path: spec.template.spec.containers[0].name
-          value: postgres
+          value: workload
 
-  - it: should use the defined security context
+  - it: should use the defined security context on postgres deployment
     values:
       - ../values.yaml
-    template: deployment.yaml
+    template: postgres.yaml
+    documentIndex: 0
     set:
       addons:
         postgres:
@@ -81,6 +127,9 @@ tests:
             username: postgres
             password: postgres-password
     asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 999
       - equal:
           path: spec.template.spec.containers[0].securityContext.runAsUser
           value: 999
@@ -91,7 +140,8 @@ tests:
   - it: should create proper volume configuration when persistence is enabled
     values:
       - ../values.yaml
-    template: deployment.yaml
+    template: postgres.yaml
+    documentIndex: 0
     set:
       addons:
         postgres:
@@ -139,7 +189,8 @@ tests:
   - it: should properly set PostgreSQL environment variables
     values:
       - ../values.yaml
-    template: deployment.yaml
+    template: postgres.yaml
+    documentIndex: 0
     set:
       addons:
         postgres:
@@ -162,7 +213,8 @@ tests:
   - it: should support existing secret for password
     values:
       - ../values.yaml
-    template: deployment.yaml
+    template: postgres.yaml
+    documentIndex: 0
     set:
       addons:
         postgres:
@@ -180,3 +232,66 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].env[?(@.name == "POSTGRES_PASSWORD")].valueFrom.secretKeyRef.key
           value: password
+
+  - it: should set custom resources on postgres deployment
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 0
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: 1Gi
+              cpu: "1"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 512Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 1Gi
+
+  - it: should have correct labels on postgres deployment
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 0
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: postgres
+
+  - it: should use custom service port
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 1
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            username: postgres
+            password: postgres-password
+          service:
+            port: 5433
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 5433

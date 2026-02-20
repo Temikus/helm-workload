@@ -1,101 +1,167 @@
 {{/*
-Postgres database sidecar container configuration
+Postgres addon labels
 */}}
-{{- define "hwl.postgres.sidecar" -}}
+{{- define "hwl.postgres.labels" -}}
+{{ include "hwl.labels" . }}
+app.kubernetes.io/component: postgres
+{{- end }}
+
+{{/*
+Postgres addon selector labels
+*/}}
+{{- define "hwl.postgres.selectorLabels" -}}
+{{ include "hwl.selectorLabels" . }}
+app.kubernetes.io/component: postgres
+{{- end }}
+
+{{/*
+Postgres standalone Deployment
+*/}}
+{{- define "hwl.postgres.deployment" -}}
 {{- $postgres := .Values.addons.postgres -}}
 {{- if $postgres.enabled -}}
-- name: postgres
-  {{- with $postgres.image }}
-  image: {{ .repository | default "postgres" }}:{{ .tag | default "15-alpine" }}
-  imagePullPolicy: {{ .pullPolicy | default "IfNotPresent" }}
-  {{- end }}
-  securityContext:
-    runAsUser: 999
-    runAsGroup: 999
-    fsGroup: 999
-  env:
-    - name: POSTGRES_USER
-      value: {{ required "PostgreSQL username is required" $postgres.auth.username | quote }}
-    {{- if $postgres.auth.existingSecret }}
-    - name: POSTGRES_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: {{ $postgres.auth.existingSecret }}
-          key: {{ $postgres.auth.existingSecretKey | default "postgres-password" }}
-    {{- else }}
-    - name: POSTGRES_PASSWORD
-      value: {{ required "PostgreSQL password is required" $postgres.auth.password | quote }}
-    {{- end }}
-    {{- if $postgres.auth.database }}
-    - name: POSTGRES_DB
-      value: {{ $postgres.auth.database | quote }}
-    {{- end }}
-    {{- with $postgres.additionalEnv }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
-  ports:
-    - name: postgres
-      containerPort: 5432
-      protocol: TCP
-  {{- with $postgres.resources }}
-  resources:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  {{- if or $postgres.persistence.enabled $postgres.persistence.existingClaim }}
-  volumeMounts:
-    - name: postgres-data
-      mountPath: /var/lib/postgresql/data
-      subPath: {{ $postgres.persistence.subPath | default "data" }}
-  {{- end }}
-  {{- if $postgres.livenessProbe }}
-  livenessProbe:
-    {{- toYaml $postgres.livenessProbe | nindent 4 }}
-  {{- else }}
-  livenessProbe:
-    exec:
-      command:
-        - pg_isready
-        - -U
-        - {{ $postgres.auth.username | quote }}
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 6
-  {{- end }}
-  {{- if $postgres.readinessProbe }}
-  readinessProbe:
-    {{- toYaml $postgres.readinessProbe | nindent 4 }}
-  {{- else }}
-  readinessProbe:
-    exec:
-      command:
-        - pg_isready
-        - -U
-        - {{ $postgres.auth.username | quote }}
-    initialDelaySeconds: 5
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 6
-  {{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hwl.fullname" . }}-postgres
+  labels:
+    {{- include "hwl.postgres.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "hwl.postgres.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "hwl.postgres.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          {{- with $postgres.image }}
+          image: {{ .repository | default "postgres" }}:{{ .tag | default "15-alpine" }}
+          imagePullPolicy: {{ .pullPolicy | default "IfNotPresent" }}
+          {{- end }}
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+          env:
+            - name: POSTGRES_USER
+              value: {{ required "PostgreSQL username is required" $postgres.auth.username | quote }}
+            {{- if $postgres.auth.existingSecret }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgres.auth.existingSecret }}
+                  key: {{ $postgres.auth.existingSecretKey | default "postgres-password" }}
+            {{- else }}
+            - name: POSTGRES_PASSWORD
+              value: {{ required "PostgreSQL password is required" $postgres.auth.password | quote }}
+            {{- end }}
+            {{- if $postgres.auth.database }}
+            - name: POSTGRES_DB
+              value: {{ $postgres.auth.database | quote }}
+            {{- end }}
+            {{- with $postgres.additionalEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          {{- with $postgres.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or $postgres.persistence.enabled $postgres.persistence.existingClaim }}
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: {{ $postgres.persistence.subPath | default "data" }}
+          {{- end }}
+          {{- if $postgres.livenessProbe }}
+          livenessProbe:
+            {{- toYaml $postgres.livenessProbe | nindent 12 }}
+          {{- else }}
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ $postgres.auth.username | quote }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- end }}
+          {{- if $postgres.readinessProbe }}
+          readinessProbe:
+            {{- toYaml $postgres.readinessProbe | nindent 12 }}
+          {{- else }}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ $postgres.auth.username | quote }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- end }}
+      {{- if or $postgres.persistence.enabled $postgres.persistence.existingClaim }}
+      volumes:
+        - name: postgres-data
+          {{- if $postgres.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ $postgres.persistence.existingClaim }}
+          {{- else if $postgres.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "hwl.fullname" . }}-postgres
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- end }}
+      {{- with $postgres.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $postgres.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $postgres.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
 {{- end }}
 
 {{/*
-Postgres volume configurations
+Postgres Service
 */}}
-{{- define "hwl.postgres.volumes" -}}
+{{- define "hwl.postgres.service" -}}
 {{- $postgres := .Values.addons.postgres -}}
-{{- if and $postgres.enabled (or $postgres.persistence.enabled $postgres.persistence.existingClaim) }}
-- name: postgres-data
-  {{- if $postgres.persistence.existingClaim }}
-  persistentVolumeClaim:
-    claimName: {{ $postgres.persistence.existingClaim }}
-  {{- else if $postgres.persistence.enabled }}
-  persistentVolumeClaim:
-    claimName: {{ include "hwl.fullname" . }}-postgres
-  {{- else }}
-  emptyDir: {}
-  {{- end }}
+{{- if $postgres.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hwl.fullname" . }}-postgres
+  labels:
+    {{- include "hwl.postgres.labels" . | nindent 4 }}
+spec:
+  type: {{ ($postgres.service).type | default "ClusterIP" }}
+  ports:
+    - port: {{ ($postgres.service).port | default 5432 }}
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    {{- include "hwl.postgres.selectorLabels" . | nindent 4 }}
 {{- end }}
 {{- end }}
 

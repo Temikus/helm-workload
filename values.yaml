@@ -175,6 +175,8 @@ addons:
     persistence:
       enabled: false
       size: 1Gi
+  # PostgreSQL addon - deploys a separate Deployment + Service for PostgreSQL.
+  # Applications should connect via {fullname}-postgres:5432.
   postgres:
     enabled: false
     image:
@@ -187,6 +189,9 @@ addons:
       database: postgres
       # existingSecret: secret-name
       # existingSecretKey: postgres-password
+    service:
+      port: 5432
+      type: ClusterIP
     resources:
       requests:
         memory: 256Mi
@@ -206,6 +211,9 @@ addons:
     additionalEnv: []
     # - name: POSTGRES_INITDB_ARGS
     #   value: "--data-checksums"
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
   cloudflareTunnel:
     enabled: false
     # FQDN that Cloudflare will route to this service (REQUIRED when enabled)
