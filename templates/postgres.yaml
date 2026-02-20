@@ -1,0 +1,6 @@
+{{- if ((.Values.addons.postgres).enabled) }}
+---
+{{- include "hwl.postgres.deployment" . }}
+---
+{{- include "hwl.postgres.service" . }}
+{{- end }}

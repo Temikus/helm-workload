@@ -24,10 +24,7 @@ containers:
   {{- if .Values.addons.vpn.enabled }}
   {{- include "hwl.gluetun.sidecar" . | nindent 2 }}
   {{- end }}
-  {{- /* If enabled, Postgres database sidecar */}}
-  {{- if .Values.addons.postgres.enabled }}
-  {{- include "hwl.postgres.sidecar" . | nindent 2 }}
-  {{- end }}
+
   {{- /* If enabled, Cloudflare Tunnel path-filter sidecar */}}
   {{- if ((.Values.addons.cloudflareTunnel).pathFilter).enabled }}
   {{- include "hwl.cloudflareTunnel.pathFilter.sidecar" . | nindent 2 }}
@@ -51,7 +48,7 @@ affinity:
 tolerations:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- if or ((.Values.addons.vpn).enabled) ((.Values.addons.postgres).enabled) ((.Values.addons.cloudflareTunnel).pathFilter).enabled ((.Values.volumes).host) (.Values.extraVolumes) }}
+{{- if or ((.Values.addons.vpn).enabled) ((.Values.addons.cloudflareTunnel).pathFilter).enabled ((.Values.volumes).host) (.Values.extraVolumes) }}
 volumes:
 {{- with .Values.volumes }}
   {{- range .host }}
@@ -70,9 +67,7 @@ volumes:
 {{- if ((.Values.addons.vpn).enabled) }}
   {{- include "hwl.gluetun.volumes" . | nindent 2 }}
 {{- end }}
-{{- if ((.Values.addons.postgres).enabled) }}
-  {{- include "hwl.postgres.volumes" . | nindent 2 }}
-{{- end }}
+
 {{- if ((.Values.addons.cloudflareTunnel).pathFilter).enabled }}
   {{- include "hwl.cloudflareTunnel.pathFilter.volumes" . | nindent 2 }}
 {{- end }}

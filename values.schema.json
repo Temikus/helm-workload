@@ -943,11 +943,12 @@
         },
         "postgres": {
           "type": "object",
+          "description": "PostgreSQL addon - deploys a separate Deployment and Service for PostgreSQL",
           "properties": {
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "Enable PostgreSQL sidecar container"
+              "description": "Enable PostgreSQL deployment"
             },
             "image": {
               "type": "object",
@@ -994,6 +995,23 @@
                 "existingSecretKey": {
                   "type": "string",
                   "description": "Key in existing secret for password"
+                }
+              }
+            },
+            "service": {
+              "type": "object",
+              "description": "Service configuration for PostgreSQL",
+              "properties": {
+                "port": {
+                  "type": "integer",
+                  "default": 5432,
+                  "description": "Service port for PostgreSQL"
+                },
+                "type": {
+                  "type": "string",
+                  "default": "ClusterIP",
+                  "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+                  "description": "Service type for PostgreSQL"
                 }
               }
             },
@@ -1076,6 +1094,24 @@
                 "type": "object"
               },
               "description": "Additional environment variables"
+            },
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Node selector for the PostgreSQL pod"
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Tolerations for the PostgreSQL pod"
+            },
+            "affinity": {
+              "type": "object",
+              "description": "Affinity rules for the PostgreSQL pod"
             }
           }
         }
