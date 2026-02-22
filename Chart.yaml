@@ -3,8 +3,8 @@ name: workload
 description: A general-purpose kubernetes workload chart with batteries included
 
 type: application
-version: 1.4.1
-appVersion: "1.4.1"
+version: 1.4.2
+appVersion: "1.4.2"
 
 maintainers:
   - name: Artem Yakimenko
