@@ -34,11 +34,10 @@ spec:
       kind: PersistentVolumeClaim
       metadata:
         name: storage
+        {{- with .Values.persistence.extraPvcLabels }}
         labels:
-          {{- include "hwl.labels" . | nindent 8 }}
-          {{- with .Values.persistence.extraPvcLabels }}
-            {{- toYaml . | nindent 8 }}
-          {{- end }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       spec:
         accessModes: {{ .Values.persistence.accessModes }}
         storageClassName: {{ .Values.persistence.storageClassName }}
