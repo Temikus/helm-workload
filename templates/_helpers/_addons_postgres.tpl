@@ -39,7 +39,7 @@ spec:
         {{- include "hwl.postgres.selectorLabels" . | nindent 8 }}
     spec:
       securityContext:
-        fsGroup: 999
+        fsGroup: {{ dig "securityContext" "fsGroup" 999 $postgres }}
       containers:
         - name: postgres
           {{- with $postgres.image }}
@@ -47,8 +47,8 @@ spec:
           imagePullPolicy: {{ .pullPolicy | default "IfNotPresent" }}
           {{- end }}
           securityContext:
-            runAsUser: 999
-            runAsGroup: 999
+            runAsUser: {{ dig "securityContext" "runAsUser" 999 $postgres }}
+            runAsGroup: {{ dig "securityContext" "runAsGroup" 999 $postgres }}
           env:
             - name: POSTGRES_USER
               value: {{ required "PostgreSQL username is required" $postgres.auth.username | quote }}
