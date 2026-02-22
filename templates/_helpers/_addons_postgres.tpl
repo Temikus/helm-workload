@@ -38,17 +38,27 @@ spec:
       labels:
         {{- include "hwl.postgres.selectorLabels" . | nindent 8 }}
     spec:
+      {{- if $postgres.securityContext }}
+      {{- if $postgres.securityContext.fsGroup }}
       securityContext:
-        fsGroup: {{ dig "securityContext" "fsGroup" 999 $postgres }}
+        fsGroup: {{ $postgres.securityContext.fsGroup }}
+      {{- end }}
+      {{- end }}
       containers:
         - name: postgres
           {{- with $postgres.image }}
           image: {{ .repository | default "postgres" }}:{{ .tag | default "15-alpine" }}
           imagePullPolicy: {{ .pullPolicy | default "IfNotPresent" }}
           {{- end }}
+          {{- if and $postgres.securityContext (or $postgres.securityContext.runAsUser $postgres.securityContext.runAsGroup) }}
           securityContext:
-            runAsUser: {{ dig "securityContext" "runAsUser" 999 $postgres }}
-            runAsGroup: {{ dig "securityContext" "runAsGroup" 999 $postgres }}
+            {{- if $postgres.securityContext.runAsUser }}
+            runAsUser: {{ $postgres.securityContext.runAsUser }}
+            {{- end }}
+            {{- if $postgres.securityContext.runAsGroup }}
+            runAsGroup: {{ $postgres.securityContext.runAsGroup }}
+            {{- end }}
+          {{- end }}
           env:
             - name: POSTGRES_USER
               value: {{ required "PostgreSQL username is required" $postgres.auth.username | quote }}
