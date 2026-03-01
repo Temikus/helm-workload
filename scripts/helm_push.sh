@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+FORCE=false
+
+while getopts "f" opt; do
+    case $opt in
+        f) FORCE=true ;;
+        *) echo "Usage: $0 [-f]"; exit 1 ;;
+    esac
+done
+
 # Extract chart name and version from Chart.yaml
 CHART_NAME=$(yq eval '.name' Chart.yaml)
 CHART_VERSION=$(yq eval '.version' Chart.yaml)
@@ -9,6 +18,13 @@ OCI_REGISTRY="oci://ghcr.io/temikus/helm-charts"
 echo "Chart: $CHART_NAME"
 echo "Version: $CHART_VERSION"
 echo "Registry: $OCI_REGISTRY"
+
+if [ "$FORCE" = true ]; then
+    echo "⚠️  Force mode enabled. Pushing regardless of existing version..."
+    helm push pkg/*.tgz "${OCI_REGISTRY}"
+    echo "✅ Successfully pushed $CHART_NAME:$CHART_VERSION"
+    exit 0
+fi
 
 # Check if the version already exists in the remote registry
 echo "Checking if version $CHART_VERSION already exists in remote registry..."
