@@ -6,8 +6,8 @@ run = [
 ]
 
 [tasks.push]
-description = "Push the chart to the repository (only if version doesn't exist)"
-run = "./scripts/helm_push.sh"
+description = "Push the chart to the repository (only if version doesn't exist). Use -f to force overwrite."
+run = "./scripts/helm_push.sh {{arg(name=\"flags\", default=\"\")}}"
 
 [tasks.test]
 description = "Test the chart"

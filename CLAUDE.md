@@ -1,73 +1,93 @@
-# CLAUDE.md
+# CLAUDE.md — workload chart
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## What This Is
-
-A general-purpose "batteries-included" Helm chart (`workload`) for deploying containerized applications on Kubernetes. Instead of writing a bespoke chart per app, consumers configure this single chart via values. Published to `oci://ghcr.io/temikus/helm-charts`. Designed to be used with Helmfile.
+General-purpose Kubernetes workload Helm chart with addon sidecars (VPN, Postgres, Cloudflare Tunnel).
 
 ## Commands
 
-All tasks use [mise](https://mise.jdx.dev/) as the task runner:
+Run from this directory (`charts/workload`):
 
-```bash
-mise run test              # Run unit tests (helm-unittest)
-mise run update-snapshot   # Update test snapshots
-mise run lint              # Lint the chart
-mise run build             # Package chart into pkg/ (runs clean first)
-mise run push              # Push to OCI registry (skips if version exists)
-mise run clean             # Remove pkg/ and charts/ artifacts
-```
-
-Direct equivalents: `helm unittest .`, `helm unittest -u .`, `helm lint .`
-
-To render templates locally for debugging: `helm template <release-name> .`
+- `mise lint` — helm lint
+- `mise test` — helm unittest
+- `mise test -- -u` — update snapshots
+- `helm unittest -f tests/<test_name>.yaml .` — run single test file
 
 ## Architecture
 
-### Template Organization
+### Template structure
 
-Two-tier template system:
+Each Kubernetes resource has a top-level template file (`templates/*.yaml`) that includes helpers from `templates/_helpers/_*.tpl`. The top-level files contain conditional rendering logic and `---` document separators; the helpers contain the actual resource definitions via `define`/`include`.
 
-- **`templates/*.yaml`** — thin dispatch files that check conditions and include partials
-- **`templates/_helpers/*.tpl`** — actual resource definitions, prefixed `hwl.` (helm-workload-library). This was previously an external library chart dependency, inlined in v1.0.0
-- **`templates/_helpers.tpl`** — legacy helpers with `workload.*` prefix (duplicates of `hwl.*` helpers from before the refactor)
+- `_common.tpl` — fullname, labels, selectorLabels, serviceAccountName
+- `_pod.tpl` — pod template spec (containers, volumes, sidecars)
+- `_container.tpl` — main application container
+- `_deployment.tpl` / `_statefulset.tpl` — workload controllers
+- `_addons_*.tpl` — addon sidecar definitions
 
-### Workload Type Selection
+### Addon sidecar pattern
 
-The chart auto-selects between Deployment and StatefulSet:
-- **StatefulSet** when `useStatefulSet: true` OR `persistence.type` is `sts`/`statefulset`/`StatefulSet`
-- **Deployment** otherwise
+Addons follow a consistent pattern:
 
-### Port/Service Model
+1. **Helper file** (`_helpers/_addons_<name>.tpl`) defines named templates for sidecar container, volumes, and any extra resources (Secrets, ConfigMaps, Services)
+2. **Pod injection** (`_pod.tpl`) conditionally includes the sidecar in `containers:` and volumes in `volumes:` using `((.Values.addons.<name>).enabled)` safe-navigation
+3. **Resource rendering** — addon-specific resources get their own top-level template file (e.g. `cloudflare_tunnel.yaml`) or are included from the deployment/statefulset templates
+4. **Values** live under `addons.<name>` with `enabled: false` default
+5. **Schema** validated in `values.schema.json`
 
-Ports are a list under `.Values.ports`, each with an optional `.service` sub-config. Multiple Services can be created from a single release. Service naming priority: `nameOverride` > `service.name` > port `name`, appended to fullname.
+### Pod template injection points (`_pod.tpl`)
 
-### Addon System (`.Values.addons`)
+Sidecars are injected **before** `extraContainers` and the main container. Volumes are injected **after** host volumes and before `extraVolumes`. The volumes `if` condition must include all addons that contribute volumes.
 
-| Addon | Purpose |
-|---|---|
-| `init` | Init container before main app |
-| `vpn` | Gluetun VPN sidecar (OpenVPN/WireGuard) |
-| `cloudflareTunnel` | Cloudflare Tunnel integration via cloudflare-operator CRDs. Includes pathFilter (nginx sidecar proxy restricting exposed paths) and NetworkPolicy |
-| `postgres` | Separate PostgreSQL Deployment + Service (moved from sidecar in v1.4.0). Apps connect via `{fullname}-postgres:5432` |
+### Cloudflare Tunnel addon
 
-### Values Schema
+Resources (in template rendering order, document indices follow this order in helm-unittest):
 
-`values.schema.json` enforces validation on key fields (image.repository required, enum constraints on pullPolicy, persistence.type, protocols, etc.). Keep this in sync when modifying values structure.
+1. Secret (when `tunnel.create` + inline credentials)
+2. Tunnel/ClusterTunnel (when `tunnel.create`)
+3. TunnelBinding (always when enabled)
+4. NetworkPolicy (when `networkPolicy.enabled`)
+5. pathFilter ConfigMap (when `pathFilter.enabled`)
+6. pathFilter Service (when `pathFilter.enabled`)
 
-## Testing
+**Note:** `helm template` sorts output by resource kind, but `helm unittest` preserves template rendering order. Always use rendering order for `documentIndex` in tests.
 
-Tests use [helm-unittest](https://github.com/helm-unittest/helm-unittest). Test files are in `tests/` with snapshots in `tests/__snapshot__/`.
+#### tunnelRef.kind derivation
 
-Tests use assertions: `equal`, `matchRegex`, `exists`/`notExists`, `hasDocuments`, `isKind`, `lengthEqual`, `contains`, `failedTemplate`, and `matchSnapshot`.
+- `tunnel.create=true` — tunnelRef.kind comes from `tunnel.kind`
+- `tunnel.create=false` — tunnelRef.kind comes from `tunnelRef.kind`
 
-When adding new template features:
-1. Add test cases in the corresponding `tests/*_test.yaml`
-2. Use `mise run update-snapshot` if adding snapshot-based tests
-3. Run `mise run test` to verify
+Both default to `ClusterTunnel`.
 
-## Known Issues
+#### pathFilter design
 
-- HPA template uses deprecated `autoscaling/v2beta1` API version
-- `appVersion` cannot be set dynamically per-release (always matches chart version)
+Traffic flow: `Cloudflare Tunnel -> cf-path-filter Service (ClusterIP) -> nginx sidecar -> 127.0.0.1:targetPort`
+
+- Nginx sidecar runs as non-root (uid 101), read-only root filesystem, no privilege escalation
+- Uses `livenessProbe` (not readinessProbe) so sidecar failure doesn't pull the pod from the main Service endpoints — the app also serves local traffic via Ingress
+- Needs writable emptyDir volumes for `/var/cache/nginx`, `/var/run`, `/var/log/nginx`
+- Nginx must listen on `0.0.0.0` (not localhost) because the Service routes via podIP
+- The `paths` value is required when `pathFilter.enabled=true` (enforced via `fail`)
+- Cloudflare rejects paths in TunnelBinding `target` field — that's why this sidecar proxy exists instead of appending paths to the target URL
+
+#### Known security considerations
+
+- `pathFilter.paths` values are interpolated directly into nginx config — no sanitization (schema should constrain with a pattern)
+- The cf-path-filter Service is reachable by any pod in the cluster; use `networkPolicy` for isolation
+- When both `networkPolicy` and `pathFilter` are enabled, the NetworkPolicy must allow the pathFilter port too (not yet implemented)
+
+## Testing conventions
+
+- Test file names match template names: `tests/addons_cloudflare_tunnel_test.yaml` tests `cloudflare_tunnel.yaml`
+- The `templates:` list at top of test file must include all templates referenced by tests (e.g. both `cloudflare_tunnel.yaml` and `deployment.yaml` for pod-level tests)
+- Use `documentIndex` based on **rendering order**, not kind-alphabetical order
+- Use `failedTemplate` assertion to test `fail` guards
+- Snapshot tests exist for deployment, ingress, and service — run `mise test -- -u` after version bumps
+
+## Files to update together
+
+When modifying an addon:
+- `templates/_helpers/_addons_<name>.tpl` — resource definitions
+- `templates/_helpers/_pod.tpl` — sidecar + volume injection (and the volumes `if` condition)
+- `templates/<name>.yaml` — top-level rendering with document separators
+- `values.yaml` — default values
+- `values.schema.json` — JSON schema validation
+- `tests/addons_<name>_test.yaml` — unit tests
