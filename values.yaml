@@ -8,7 +8,7 @@ image:
   repository: nginx
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -148,8 +148,8 @@ addons:
   init:
     enabled: false
     image:
-      repository: ""
-      tag: ""
+      repository: "busybox"
+      tag: "latest"
       pullPolicy: IfNotPresent
     command: [ ]
     securityContext: { }
