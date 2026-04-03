@@ -801,9 +801,10 @@
                 "paths": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^/[a-zA-Z0-9/_.-]*$"
                   },
-                  "description": "List of paths to allow through the tunnel (e.g., ['/webhook', '/api/v1'])"
+                  "description": "List of paths to allow through the tunnel (e.g., ['/webhook', '/api/v1']). Only alphanumeric characters, slashes, underscores, dots, and hyphens are allowed."
                 },
                 "port": {
                   "type": "integer",

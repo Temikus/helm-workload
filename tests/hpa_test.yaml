@@ -16,6 +16,8 @@ tests:
     asserts:
       - isKind:
           of: HorizontalPodAutoscaler
+      - isAPIVersion:
+          of: autoscaling/v2
       - equal:
           path: spec.minReplicas
           value: 2
@@ -23,7 +25,7 @@ tests:
           path: spec.maxReplicas
           value: 10
       - equal:
-          path: spec.metrics[0].resource.targetAverageUtilization
+          path: spec.metrics[0].resource.target.averageUtilization
           value: 80
 
   - it: should support both CPU and memory metrics
@@ -39,13 +41,13 @@ tests:
           path: spec.metrics[0].resource.name
           value: cpu
       - equal:
-          path: spec.metrics[0].resource.targetAverageUtilization
+          path: spec.metrics[0].resource.target.averageUtilization
           value: 80
       - equal:
           path: spec.metrics[1].resource.name
           value: memory
       - equal:
-          path: spec.metrics[1].resource.targetAverageUtilization
+          path: spec.metrics[1].resource.target.averageUtilization
           value: 85
 
   - it: should properly set scaleTargetRef for Deployment
