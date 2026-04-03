@@ -939,6 +939,96 @@ tests:
       - hasDocuments:
           count: 3
 
+  - it: should allow pathFilter port in NetworkPolicy when both networkPolicy and pathFilter are enabled
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          networkPolicy:
+            enabled: true
+          pathFilter:
+            enabled: true
+            port: 8880
+            paths:
+              - /webhook
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - lengthEqual:
+          path: spec.ingress[0].ports
+          count: 2
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8080
+      - equal:
+          path: spec.ingress[0].ports[0].protocol
+          value: TCP
+      - equal:
+          path: spec.ingress[0].ports[1].port
+          value: 8880
+      - equal:
+          path: spec.ingress[0].ports[1].protocol
+          value: TCP
+
+  - it: should NOT include pathFilter port in NetworkPolicy when only networkPolicy is enabled
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          networkPolicy:
+            enabled: true
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - lengthEqual:
+          path: spec.ingress[0].ports
+          count: 1
+
+  - it: should create all 6 resources with tunnel.create + networkPolicy + pathFilter
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                apiToken: tok
+          networkPolicy:
+            enabled: true
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+    asserts:
+      # Secret + ClusterTunnel + TunnelBinding + NetworkPolicy + ConfigMap + Service
+      - hasDocuments:
+          count: 6
+
   # ===========================================================================
   # Labels are applied consistently
   # ===========================================================================

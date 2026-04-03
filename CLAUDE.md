@@ -72,7 +72,7 @@ Traffic flow: `Cloudflare Tunnel -> cf-path-filter Service (ClusterIP) -> nginx 
 
 - `pathFilter.paths` values are interpolated directly into nginx config — no sanitization (schema should constrain with a pattern)
 - The cf-path-filter Service is reachable by any pod in the cluster; use `networkPolicy` for isolation
-- When both `networkPolicy` and `pathFilter` are enabled, the NetworkPolicy must allow the pathFilter port too (not yet implemented)
+- When both `networkPolicy` and `pathFilter` are enabled, the NetworkPolicy allows the pathFilter port in addition to the targetPort
 
 ## Testing conventions
 
