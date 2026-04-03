@@ -154,6 +154,10 @@ spec:
     - ports:
         - protocol: TCP
           port: {{ $cf.targetPort }}
+{{- if and $cf.pathFilter $cf.pathFilter.enabled }}
+        - protocol: TCP
+          port: {{ $cf.pathFilter.port | default 8880 }}
+{{- end }}
 {{- end }}
 {{- end }}
 
