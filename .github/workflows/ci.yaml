@@ -16,7 +16,9 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Install helm-unittest plugin
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest
+        # TODO: Remove --verify=false once helm-unittest publishes signed releases
+        # Tracking: https://github.com/helm-unittest/helm-unittest/issues/362
+        run: helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest
 
       - name: Lint
         run: helm lint .
