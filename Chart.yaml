@@ -1,7 +1,19 @@
 apiVersion: v2
 name: workload
 description: A general-purpose kubernetes workload chart with batteries included
-
+home: https://github.com/Temikus/helm-workload
+sources:
+  - https://github.com/Temikus/helm-workload
+keywords:
+  - workload
+  - deployment
+  - statefulset
+  - kubernetes
+  - general-purpose
+  - sidecar
+  - vpn
+  - postgres
+  - cloudflare-tunnel
 type: application
 version: 1.4.3
 appVersion: "1.4.3"

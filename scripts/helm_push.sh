@@ -13,7 +13,7 @@ done
 # Extract chart name and version from Chart.yaml
 CHART_NAME=$(yq eval '.name' Chart.yaml)
 CHART_VERSION=$(yq eval '.version' Chart.yaml)
-OCI_REGISTRY="oci://ghcr.io/temikus/helm-charts"
+OCI_REGISTRY="${OCI_REGISTRY:-oci://ghcr.io/temikus/helm-charts}"
 
 echo "Chart: $CHART_NAME"
 echo "Version: $CHART_VERSION"

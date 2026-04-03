@@ -24,3 +24,11 @@
 
 # Packaging
 pkg/
+
+# Development files
+CLAUDE.md
+.claude/
+justfile
+CONTRIBUTING.md
+CHANGELOG.md
+.github/

@@ -6,9 +6,9 @@ General-purpose Kubernetes workload Helm chart with addon sidecars (VPN, Postgre
 
 Run from this directory (`charts/workload`):
 
-- `mise lint` — helm lint
-- `mise test` — helm unittest
-- `mise test -- -u` — update snapshots
+- `just lint` — helm lint
+- `just test` — helm unittest
+- `just test -u` — update snapshots
 - `helm unittest -f tests/<test_name>.yaml .` — run single test file
 
 ## Architecture
@@ -80,7 +80,7 @@ Traffic flow: `Cloudflare Tunnel -> cf-path-filter Service (ClusterIP) -> nginx 
 - The `templates:` list at top of test file must include all templates referenced by tests (e.g. both `cloudflare_tunnel.yaml` and `deployment.yaml` for pod-level tests)
 - Use `documentIndex` based on **rendering order**, not kind-alphabetical order
 - Use `failedTemplate` assertion to test `fail` guards
-- Snapshot tests exist for deployment, ingress, and service — run `mise test -- -u` after version bumps
+- Snapshot tests exist for deployment, ingress, and service — run `just test -u` after version bumps
 
 ## Files to update together
 
