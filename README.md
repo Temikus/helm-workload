@@ -1,7 +1,7 @@
 # helm-workload
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Chart Version](https://img.shields.io/badge/Chart-v1.3.3-green.svg)](Chart.yaml)
+[![Chart Version](https://img.shields.io/github/v/tag/Temikus/helm-workload?label=Chart&sort=semver)](https://github.com/Temikus/helm-workload/releases)
 
 A general-purpose Kubernetes workload Helm chart with batteries included. Deploy any container image as a Deployment or StatefulSet with optional addon sidecars for VPN, PostgreSQL, and Cloudflare Tunnel.
 
@@ -15,7 +15,7 @@ A general-purpose Kubernetes workload Helm chart with batteries included. Deploy
 ### From OCI Registry
 
 ```bash
-helm install my-release oci://ghcr.io/temikus/helm-charts/workload --version 1.3.3
+helm install my-release oci://ghcr.io/temikus/helm-charts/workload --version 1.5.1
 ```
 
 ### From Source
