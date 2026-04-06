@@ -1,0 +1,188 @@
+suite: NetworkPolicy
+templates:
+  - network_policy.yaml
+tests:
+  - it: should not create NetworkPolicy by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create NetworkPolicy when enabled with default allowPortsIngress
+    set:
+      networkPolicy:
+        enabled: true
+      ports:
+        - name: http
+          port: 80
+          protocol: TCP
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+      - equal:
+          path: spec.ingress
+          value:
+            - ports:
+                - protocol: TCP
+                  port: 80
+
+  - it: should render multiple ports with allowPortsIngress
+    set:
+      networkPolicy:
+        enabled: true
+      ports:
+        - name: http
+          port: 80
+          protocol: TCP
+        - name: metrics
+          port: 9090
+          protocol: TCP
+    asserts:
+      - equal:
+          path: spec.ingress
+          value:
+            - ports:
+                - protocol: TCP
+                  port: 80
+                - protocol: TCP
+                  port: 9090
+
+  - it: should default port protocol to TCP
+    set:
+      networkPolicy:
+        enabled: true
+      ports:
+        - name: http
+          port: 80
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].protocol
+          value: TCP
+
+  - it: should deny all ingress when allowPortsIngress is false and no rules
+    set:
+      networkPolicy:
+        enabled: true
+        allowPortsIngress: false
+      ports:
+        - name: http
+          port: 80
+          protocol: TCP
+    asserts:
+      - isEmpty:
+          path: spec.ingress
+
+  - it: should render explicit ingress rules with namespaceSelector
+    set:
+      networkPolicy:
+        enabled: true
+        ingress:
+          - ports:
+              - port: 80
+                protocol: TCP
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: monitoring
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 80
+      - equal:
+          path: spec.ingress[0].from[0].namespaceSelector.matchLabels
+          value:
+            kubernetes.io/metadata.name: monitoring
+
+  - it: should render explicit ingress rules with podSelector
+    set:
+      networkPolicy:
+        enabled: true
+        ingress:
+          - ports:
+              - port: 80
+                protocol: TCP
+            from:
+              - podSelector:
+                  matchLabels:
+                    app: frontend
+    asserts:
+      - equal:
+          path: spec.ingress[0].from[0].podSelector.matchLabels
+          value:
+            app: frontend
+
+  - it: should render combined namespace and pod selectors
+    set:
+      networkPolicy:
+        enabled: true
+        ingress:
+          - ports:
+              - port: 80
+                protocol: TCP
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: monitoring
+              - podSelector:
+                  matchLabels:
+                    app: frontend
+    asserts:
+      - lengthEqual:
+          path: spec.ingress[0].from
+          count: 2
+
+  - it: should use correct metadata name and labels
+    set:
+      networkPolicy:
+        enabled: true
+      ports:
+        - name: http
+          port: 80
+          protocol: TCP
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-workload
+      - isNotNull:
+          path: metadata.labels["app.kubernetes.io/name"]
+      - isNotNull:
+          path: metadata.labels["app.kubernetes.io/instance"]
+
+  - it: should select pods using standard selector labels
+    set:
+      networkPolicy:
+        enabled: true
+      ports:
+        - name: http
+          port: 80
+          protocol: TCP
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/name"]
+          value: workload
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+
+  - it: should ignore allowPortsIngress when explicit rules are provided
+    set:
+      networkPolicy:
+        enabled: true
+        allowPortsIngress: true
+        ingress:
+          - ports:
+              - port: 443
+                protocol: TCP
+      ports:
+        - name: http
+          port: 80
+          protocol: TCP
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 443
