@@ -144,6 +144,24 @@ health:
 hostNetwork:
   enabled: false
 
+networkPolicy:
+  enabled: false
+  # Automatically allow ingress on all ports defined in .Values.ports from anywhere.
+  # Ignored when explicit ingress rules are provided. Set to false for deny-all.
+  allowPortsIngress: true
+  # Explicit ingress rules (override allowPortsIngress when non-empty)
+  ingress: []
+    # - ports:
+    #     - port: 80
+    #       protocol: TCP
+    #   from:
+    #     - namespaceSelector:
+    #         matchLabels:
+    #           kubernetes.io/metadata.name: monitoring
+    #     - podSelector:
+    #         matchLabels:
+    #           app: frontend
+
 addons:
   init:
     enabled: false

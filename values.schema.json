@@ -448,6 +448,84 @@
         }
       }
     },
+    "networkPolicy": {
+      "type": "object",
+      "description": "NetworkPolicy configuration for restricting ingress traffic to the pod",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Create a NetworkPolicy for the workload"
+        },
+        "allowPortsIngress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically allow ingress on all ports from .Values.ports. Ignored when explicit ingress rules are provided."
+        },
+        "ingress": {
+          "type": "array",
+          "default": [],
+          "description": "Explicit ingress rules. Each rule can specify ports and from (namespaceSelector/podSelector).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ports": {
+                "type": "array",
+                "description": "Ports to allow in this rule",
+                "items": {
+                  "type": "object",
+                  "required": ["port"],
+                  "properties": {
+                    "port": {
+                      "type": ["integer", "string"],
+                      "description": "Port number or name"
+                    },
+                    "protocol": {
+                      "type": "string",
+                      "enum": ["TCP", "UDP", "SCTP"],
+                      "default": "TCP",
+                      "description": "Protocol for the port"
+                    }
+                  }
+                }
+              },
+              "from": {
+                "type": "array",
+                "description": "Sources allowed to access the ports (namespaceSelector, podSelector, ipBlock)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "namespaceSelector": {
+                      "type": "object",
+                      "description": "Namespace selector for allowed sources"
+                    },
+                    "podSelector": {
+                      "type": "object",
+                      "description": "Pod selector for allowed sources"
+                    },
+                    "ipBlock": {
+                      "type": "object",
+                      "description": "IP block for allowed sources",
+                      "properties": {
+                        "cidr": {
+                          "type": "string",
+                          "description": "CIDR range"
+                        },
+                        "except": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "description": "CIDRs to exclude"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "volumes": {
       "type": "object",
       "properties": {
