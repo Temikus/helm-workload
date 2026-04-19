@@ -4,6 +4,15 @@
 
 replicaCount: 1
 
+# -- Rollout strategy for Deployment (strategy) or StatefulSet (updateStrategy)
+# For Deployments: type can be "RollingUpdate" or "Recreate"
+# For StatefulSets: type can be "RollingUpdate" or "OnDelete"
+strategy: {}
+  # type: RollingUpdate
+  # rollingUpdate:
+  #   maxUnavailable: 0
+  #   maxSurge: 1
+
 image:
   repository: nginx
   pullPolicy: IfNotPresent

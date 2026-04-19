@@ -10,6 +10,10 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- with .Values.strategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "hwl.selectorLabels" . | nindent 6 }}

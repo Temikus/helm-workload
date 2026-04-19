@@ -111,6 +111,59 @@ tests:
           path: spec.template.spec.containers[0].volumeMounts[2].readOnly
           value: true
 
+  - it: should not set updateStrategy when not configured
+    set:
+      useStatefulSet: true
+      persistence:
+        enabled: true
+        mountPath: /data
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+    template: statefulset.yaml
+    asserts:
+      - notExists:
+          path: spec.updateStrategy
+
+  - it: should set updateStrategy when strategy is configured
+    set:
+      useStatefulSet: true
+      persistence:
+        enabled: true
+        mountPath: /data
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 0
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.updateStrategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.updateStrategy.rollingUpdate.maxUnavailable
+          value: 0
+
+  - it: should support OnDelete strategy for statefulset
+    set:
+      useStatefulSet: true
+      persistence:
+        enabled: true
+        mountPath: /data
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        size: 1Gi
+      strategy:
+        type: OnDelete
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.updateStrategy.type
+          value: OnDelete
+
   # Test deployments
   - it: should handle legacy host volumes format
     set:
