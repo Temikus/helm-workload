@@ -51,6 +51,43 @@ tests:
       - matchSnapshot:
           path: spec.template.spec.containers[0].securityContext
 
+  - it: should not set strategy when not configured
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.strategy
+
+  - it: should set strategy when configured
+    template: deployment.yaml
+    set:
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 0
+          maxSurge: 1
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 0
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 1
+
+  - it: should support Recreate strategy
+    template: deployment.yaml
+    set:
+      strategy:
+        type: Recreate
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - notExists:
+          path: spec.strategy.rollingUpdate
+
   - it: should not include volume mounts when none are configured
     set: {}
     template: deployment.yaml

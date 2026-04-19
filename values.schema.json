@@ -380,6 +380,32 @@
         }
       }
     },
+    "strategy": {
+      "type": "object",
+      "description": "Rollout strategy for Deployment (strategy) or StatefulSet (updateStrategy)",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Strategy type (RollingUpdate, Recreate for Deployment; RollingUpdate, OnDelete for StatefulSet)"
+        },
+        "rollingUpdate": {
+          "type": "object",
+          "description": "Rolling update configuration",
+          "properties": {
+            "maxUnavailable": {
+              "description": "Maximum number of pods that can be unavailable during the update"
+            },
+            "maxSurge": {
+              "description": "Maximum number of pods that can be created above the desired number (Deployment only)"
+            },
+            "partition": {
+              "type": "integer",
+              "description": "Ordinal at which to partition the StatefulSet update (StatefulSet only)"
+            }
+          }
+        }
+      }
+    },
     "autoscaling": {
       "type": "object",
       "properties": {
