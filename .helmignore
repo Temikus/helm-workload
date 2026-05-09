@@ -32,3 +32,4 @@ justfile
 CONTRIBUTING.md
 CHANGELOG.md
 .github/
+docs/

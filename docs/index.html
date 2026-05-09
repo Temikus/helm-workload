@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>helm-workload &mdash; General-Purpose Kubernetes Workload Chart</title>
+  <meta name="description" content="A batteries-included Helm chart for deploying any container as a Deployment or StatefulSet with optional VPN, PostgreSQL, and Cloudflare Tunnel sidecars.">
+  <style>
+    :root {
+      --bg: #fafafa;
+      --surface: #fff;
+      --text: #1a1a2e;
+      --text-muted: #555;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --border: #e5e7eb;
+      --code-bg: #f3f4f6;
+      --code-text: #1f2937;
+      --pre-bg: #1e293b;
+      --pre-text: #e2e8f0;
+      --pre-comment: #94a3b8;
+      --pre-key: #7dd3fc;
+      --pre-string: #86efac;
+      --pre-num: #fca5a5;
+      --badge-bg: #dbeafe;
+      --badge-text: #1e40af;
+      --nav-bg: rgba(250,250,250,0.92);
+      --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --accent: #60a5fa;
+        --accent-light: #1e3a5f;
+        --border: #334155;
+        --code-bg: #334155;
+        --code-text: #e2e8f0;
+        --pre-bg: #0f172a;
+        --badge-bg: #1e3a5f;
+        --badge-text: #93c5fd;
+        --nav-bg: rgba(15,23,42,0.92);
+        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      }
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* Nav */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--nav-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    nav .nav-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      height: 3.5rem;
+      gap: 2rem;
+      overflow-x: auto;
+    }
+    nav .nav-brand {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      transition: color 0.15s;
+    }
+    nav a:hover { color: var(--accent); }
+
+    /* Main */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 4rem 0 3rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 1.5rem;
+    }
+    .hero-badges {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+    }
+
+    /* Sections */
+    section { padding-top: 3rem; }
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--border);
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 1.75rem 0 0.5rem;
+    }
+    p, li { margin-bottom: 0.5rem; }
+    ul { padding-left: 1.5rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Install box */
+    .install-cmd {
+      background: var(--pre-bg);
+      color: var(--pre-text);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      position: relative;
+    }
+    .install-cmd .prompt { color: var(--pre-comment); user-select: none; }
+
+    /* Code */
+    code {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 0.875em;
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+    pre {
+      background: var(--pre-bg);
+      color: var(--pre-text);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin: 1rem 0;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+    .c { color: var(--pre-comment); }
+    .k { color: var(--pre-key); }
+    .s { color: var(--pre-string); }
+    .n { color: var(--pre-num); }
+
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .card h4 {
+      font-size: 1rem;
+      margin-bottom: 0.4rem;
+    }
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; margin: 1rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      background: var(--surface);
+      position: sticky;
+      top: 3.5rem;
+    }
+    td code { font-size: 0.8rem; }
+
+    /* Footer */
+    footer {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    footer a { color: var(--text-muted); }
+    footer a:hover { color: var(--accent); }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.75rem; }
+      .hero p { font-size: 1rem; }
+      h2 { font-size: 1.3rem; }
+      nav .nav-inner { gap: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-brand" href="#">helm-workload</a>
+    <a href="#install">Install</a>
+    <a href="#features">Features</a>
+    <a href="#config">Configuration</a>
+    <a href="#addons">Addons</a>
+    <a href="#dev">Development</a>
+    <a href="https://github.com/Temikus/helm-workload">GitHub</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>helm-<span>workload</span></h1>
+  <p>A general-purpose Kubernetes workload Helm chart with batteries included. Deploy any container as a Deployment or StatefulSet with optional addon sidecars.</p>
+  <div class="hero-badges">
+    <span class="badge">Apache 2.0</span>
+    <span class="badge">Helm 3</span>
+    <span class="badge">Kubernetes 1.26+</span>
+    <span class="badge">v1.8.0</span>
+  </div>
+</div>
+
+<!-- Install -->
+<section id="install">
+  <h2>Installation</h2>
+
+  <h3>From OCI Registry</h3>
+  <div class="install-cmd"><span class="prompt">$ </span>helm install my-release oci://ghcr.io/temikus/helm-charts/workload --version 1.8.0</div>
+
+  <h3>From Source</h3>
+  <div class="install-cmd"><span class="prompt">$ </span>git clone https://github.com/Temikus/helm-workload.git<br><span class="prompt">$ </span>cd helm-workload<br><span class="prompt">$ </span>helm install my-release .</div>
+
+  <h3>With Helmfile (recommended)</h3>
+<pre><code><span class="k">releases</span>:
+  - <span class="k">name</span>: <span class="s">my-app</span>
+    <span class="k">namespace</span>: <span class="s">my-namespace</span>
+    <span class="k">chart</span>: <span class="s">oci://ghcr.io/temikus/helm-charts/workload</span>
+    <span class="k">version</span>: <span class="s">1.8.0</span>
+    <span class="k">values</span>:
+      - <span class="k">image</span>:
+          <span class="k">repository</span>: <span class="s">nginx</span>
+          <span class="k">tag</span>: <span class="s">stable</span>
+        <span class="k">ports</span>:
+          - <span class="k">name</span>: <span class="s">http</span>
+            <span class="k">port</span>: <span class="n">80</span>
+            <span class="k">service</span>:
+              <span class="k">enabled</span>: <span class="n">true</span>
+              <span class="k">port</span>: <span class="n">80</span></code></pre>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <h2>Features</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Deployment &amp; StatefulSet</h4>
+      <p>Auto-selects workload type based on your persistence configuration. Supports rollout strategies for both.</p>
+    </div>
+    <div class="card">
+      <h4>Service &amp; Ingress</h4>
+      <p>Flexible port-to-service mapping with multi-port support. Extra services for UDP/mixed protocols via <code>extraServices</code>.</p>
+    </div>
+    <div class="card">
+      <h4>Persistence</h4>
+      <p>PVC-backed storage with configurable access modes, storage class, and mount paths. StatefulSet VolumeClaimTemplates supported.</p>
+    </div>
+    <div class="card">
+      <h4>Autoscaling</h4>
+      <p>HPA with CPU and memory targets using the <code>autoscaling/v2</code> API.</p>
+    </div>
+    <div class="card">
+      <h4>NetworkPolicy</h4>
+      <p>Restrict ingress traffic with auto-generated port rules or fully custom ingress specifications.</p>
+    </div>
+    <div class="card">
+      <h4>Addon Sidecars</h4>
+      <p>VPN (Gluetun), PostgreSQL, Cloudflare Tunnel, and init containers &mdash; all opt-in via values.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Configuration -->
+<section id="config">
+  <h2>Configuration</h2>
+  <p>All configuration is done through <code>values.yaml</code>. Run <code>helm show values oci://ghcr.io/temikus/helm-charts/workload</code> for the full reference.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>image.repository</code></td><td>Container image repository</td><td><code>nginx</code></td></tr>
+        <tr><td><code>image.tag</code></td><td>Container image tag</td><td><code>latest</code></td></tr>
+        <tr><td><code>replicaCount</code></td><td>Number of replicas</td><td><code>1</code></td></tr>
+        <tr><td><code>ports</code></td><td>List of container/service port definitions</td><td><code>[]</code></td></tr>
+        <tr><td><code>persistence.enabled</code></td><td>Enable persistent storage</td><td><code>false</code></td></tr>
+        <tr><td><code>ingress.enabled</code></td><td>Enable Ingress resource</td><td><code>false</code></td></tr>
+        <tr><td><code>autoscaling.enabled</code></td><td>Enable HPA (<code>autoscaling/v2</code>)</td><td><code>false</code></td></tr>
+        <tr><td><code>hostNetwork.enabled</code></td><td>Enable host networking</td><td><code>false</code></td></tr>
+        <tr><td><code>strategy</code></td><td>Rollout strategy for Deployment or StatefulSet</td><td><code>{}</code></td></tr>
+        <tr><td><code>networkPolicy.enabled</code></td><td>Create a NetworkPolicy restricting ingress</td><td><code>false</code></td></tr>
+        <tr><td><code>extraServices</code></td><td>Additional multi-port Service resources</td><td><code>[]</code></td></tr>
+        <tr><td><code>extraContainers</code></td><td>Additional sidecar containers</td><td><code>[]</code></td></tr>
+        <tr><td><code>extraVolumes</code></td><td>Additional volumes to mount</td><td><code>[]</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Rollout Strategy</h3>
+  <p>The <code>strategy</code> value maps to <code>spec.strategy</code> on Deployments and <code>spec.updateStrategy</code> on StatefulSets.</p>
+<pre><code><span class="k">strategy</span>:
+  <span class="k">type</span>: <span class="s">RollingUpdate</span>
+  <span class="k">rollingUpdate</span>:
+    <span class="k">maxUnavailable</span>: <span class="n">0</span>
+    <span class="k">maxSurge</span>: <span class="n">1</span></code></pre>
+
+  <h3>NetworkPolicy</h3>
+  <p>Restrict ingress traffic with auto-generated port rules or explicit ingress specifications.</p>
+<pre><code><span class="k">networkPolicy</span>:
+  <span class="k">enabled</span>: <span class="n">true</span>
+  <span class="c"># Auto-allow ingress on all .Values.ports (default)</span>
+  <span class="k">allowPortsIngress</span>: <span class="n">true</span>
+  <span class="c"># Or explicit rules:</span>
+  <span class="k">ingress</span>:
+    - <span class="k">ports</span>:
+        - <span class="k">port</span>: <span class="n">80</span>
+          <span class="k">protocol</span>: <span class="s">TCP</span>
+      <span class="k">from</span>:
+        - <span class="k">namespaceSelector</span>:
+            <span class="k">matchLabels</span>:
+              <span class="k">kubernetes.io/metadata.name</span>: <span class="s">monitoring</span></code></pre>
+
+  <h3>Extra Services</h3>
+  <p>Create additional Service resources alongside port-derived services, useful for UDP discovery or mixed-protocol setups.</p>
+<pre><code><span class="k">extraServices</span>:
+  - <span class="k">name</span>: <span class="s">device-mgmt</span>
+    <span class="k">type</span>: <span class="s">LoadBalancer</span>
+    <span class="k">ports</span>:
+      - <span class="k">name</span>: <span class="s">discovery</span>
+        <span class="k">port</span>: <span class="n">29810</span>
+        <span class="k">protocol</span>: <span class="s">UDP</span>
+      - <span class="k">name</span>: <span class="s">manager</span>
+        <span class="k">port</span>: <span class="n">29811</span></code></pre>
+</section>
+
+<!-- Addons -->
+<section id="addons">
+  <h2>Addons</h2>
+  <p>Addon sidecars are injected into the pod alongside your main container. All are disabled by default and configured under <code>addons.*</code>.</p>
+
+  <h3>Init Container</h3>
+  <p>Run an init container before the main application starts.</p>
+<pre><code><span class="k">addons</span>:
+  <span class="k">init</span>:
+    <span class="k">enabled</span>: <span class="n">true</span>
+    <span class="k">image</span>:
+      <span class="k">repository</span>: <span class="s">busybox</span>
+      <span class="k">tag</span>: <span class="s">latest</span>
+    <span class="k">command</span>: [<span class="s">"sh"</span>, <span class="s">"-c"</span>, <span class="s">"echo initializing"</span>]</code></pre>
+
+  <h3>VPN (Gluetun)</h3>
+  <p>Adds a <a href="https://github.com/qdm12/gluetun">Gluetun</a> VPN sidecar with OpenVPN or WireGuard support and multiple provider configurations.</p>
+<pre><code><span class="k">addons</span>:
+  <span class="k">vpn</span>:
+    <span class="k">enabled</span>: <span class="n">true</span>
+    <span class="k">provider</span>:
+      <span class="k">name</span>: <span class="s">mullvad</span>
+      <span class="k">type</span>: <span class="s">wireguard</span>
+    <span class="k">wireguard</span>:
+      <span class="k">privateKey</span>: <span class="s">""</span>       <span class="c"># or use existingSecret</span>
+    <span class="k">config</span>:
+      <span class="k">timezone</span>: <span class="s">UTC</span>
+      <span class="k">serverSelection</span>:
+        <span class="k">countries</span>: <span class="s">Sweden</span></code></pre>
+
+  <h3>PostgreSQL</h3>
+  <p>Deploys a separate PostgreSQL Deployment + Service. Applications connect via <code>{fullname}-postgres:5432</code>.</p>
+<pre><code><span class="k">addons</span>:
+  <span class="k">postgres</span>:
+    <span class="k">enabled</span>: <span class="n">true</span>
+    <span class="k">auth</span>:
+      <span class="k">username</span>: <span class="s">myapp</span>
+      <span class="k">password</span>: <span class="s">secret</span>       <span class="c"># or use existingSecret</span>
+      <span class="k">database</span>: <span class="s">myapp_db</span>
+    <span class="k">persistence</span>:
+      <span class="k">enabled</span>: <span class="n">true</span>
+      <span class="k">size</span>: <span class="s">8Gi</span></code></pre>
+
+  <h3>Cloudflare Tunnel</h3>
+  <p>Exposes your service through a Cloudflare Tunnel using <a href="https://github.com/adyanth/cloudflare-operator">cloudflare-operator</a>. Supports optional path filtering via an nginx sidecar proxy and NetworkPolicy for defense-in-depth.</p>
+<pre><code><span class="k">addons</span>:
+  <span class="k">cloudflareTunnel</span>:
+    <span class="k">enabled</span>: <span class="n">true</span>
+    <span class="k">fqdn</span>: <span class="s">myapp.example.com</span>
+    <span class="k">protocol</span>: <span class="s">http</span>
+    <span class="k">targetPort</span>: <span class="n">8080</span>
+    <span class="k">tunnelRef</span>:
+      <span class="k">kind</span>: <span class="s">ClusterTunnel</span>
+      <span class="k">name</span>: <span class="s">my-cluster-tunnel</span>
+    <span class="c"># Optional path filtering</span>
+    <span class="k">pathFilter</span>:
+      <span class="k">enabled</span>: <span class="n">true</span>
+      <span class="k">paths</span>: [<span class="s">"/webhook"</span>, <span class="s">"/api"</span>]
+    <span class="c"># Optional network policy</span>
+    <span class="k">networkPolicy</span>:
+      <span class="k">enabled</span>: <span class="n">true</span></code></pre>
+</section>
+
+<!-- Examples -->
+<section id="examples">
+  <h2>Examples</h2>
+
+  <h3>Simple container</h3>
+<pre><code><span class="k">image</span>:
+  <span class="k">repository</span>: <span class="s">quay.io/curl/curl</span>
+  <span class="k">tag</span>: <span class="s">latest</span>
+<span class="k">command</span>: [<span class="s">"sleep"</span>, <span class="s">"infinity"</span>]</code></pre>
+
+  <h3>Web application with Ingress and persistence</h3>
+<pre><code><span class="k">image</span>:
+  <span class="k">repository</span>: <span class="s">homebridge/homebridge</span>
+  <span class="k">tag</span>: <span class="s">"2024-01-08"</span>
+
+<span class="k">ports</span>:
+  - <span class="k">name</span>: <span class="s">http</span>
+    <span class="k">port</span>: <span class="n">8581</span>
+    <span class="k">service</span>:
+      <span class="k">enabled</span>: <span class="n">true</span>
+      <span class="k">port</span>: <span class="n">8581</span>
+
+<span class="k">persistence</span>:
+  <span class="k">enabled</span>: <span class="n">true</span>
+  <span class="k">type</span>: <span class="s">statefulset</span>
+  <span class="k">storageClassName</span>: <span class="s">longhorn-retained</span>
+  <span class="k">mountPath</span>: <span class="s">/homebridge</span>
+  <span class="k">accessModes</span>: [<span class="s">ReadWriteOnce</span>]
+  <span class="k">size</span>: <span class="s">5Gi</span>
+
+<span class="k">ingress</span>:
+  <span class="k">enabled</span>: <span class="n">true</span>
+  <span class="k">hosts</span>:
+    - <span class="k">host</span>: <span class="s">homebridge.example.com</span>
+      <span class="k">paths</span>:
+        - <span class="k">path</span>: <span class="s">/</span>
+          <span class="k">pathType</span>: <span class="s">ImplementationSpecific</span>
+  <span class="k">tls</span>:
+    - <span class="k">secretName</span>: <span class="s">homebridge-tls</span>
+      <span class="k">hosts</span>: [<span class="s">homebridge.example.com</span>]</code></pre>
+</section>
+
+<!-- Development -->
+<section id="dev">
+  <h2>Development</h2>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li><a href="https://helm.sh/">Helm</a> 3.x</li>
+    <li><a href="https://github.com/helm-unittest/helm-unittest">helm-unittest</a> plugin</li>
+    <li><a href="https://github.com/casey/just">just</a> (optional, for task automation)</li>
+  </ul>
+
+  <h3>Commands</h3>
+  <div class="install-cmd"><span class="prompt">$ </span>just lint          <span class="c"># Lint the chart</span><br><span class="prompt">$ </span>just test          <span class="c"># Run unit tests</span><br><span class="prompt">$ </span>just test -u       <span class="c"># Update test snapshots</span><br><span class="prompt">$ </span>just build         <span class="c"># Package the chart</span></div>
+
+  <h3>Contributing</h3>
+  <p>See <a href="https://github.com/Temikus/helm-workload/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> for guidelines on making changes, testing, and submitting pull requests.</p>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    <a href="https://github.com/Temikus/helm-workload">GitHub</a>
+    &middot;
+    <a href="https://github.com/Temikus/helm-workload/blob/main/CHANGELOG.md">Changelog</a>
+    &middot;
+    <a href="https://github.com/Temikus/helm-workload/blob/main/LICENSE">Apache 2.0</a>
+  </p>
+</footer>
+
+</body>
+</html>
