@@ -185,9 +185,10 @@ addons:
     firewall: {}
     enabled: false
     image:
+      # renovate: datasource=docker depName=ghcr.io/qdm12/gluetun
       repository: ghcr.io/qdm12/gluetun
-      tag: latest
-      pullPolicy: Always
+      tag: v3.41.1
+      pullPolicy: IfNotPresent
     provider:
       name: ""
       type: "openvpn"
