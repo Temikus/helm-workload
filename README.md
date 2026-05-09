@@ -15,7 +15,7 @@ A general-purpose Kubernetes workload Helm chart with batteries included. Deploy
 ### From OCI Registry
 
 ```bash
-helm install my-release oci://ghcr.io/temikus/helm-charts/workload --version 1.5.1
+helm install my-release oci://ghcr.io/temikus/helm-charts/workload --version 1.8.0
 ```
 
 ### From Source
@@ -33,7 +33,7 @@ releases:
   - name: my-app
     namespace: my-namespace
     chart: oci://ghcr.io/temikus/helm-charts/workload
-    version: 1.3.3
+    version: 1.8.0
     values:
       - image:
           repository: nginx
@@ -110,8 +110,11 @@ All configuration is done through `values.yaml`. See the file for full documenta
 | `ports` | List of container/service port definitions | `[]` |
 | `persistence.enabled` | Enable persistent storage | `false` |
 | `ingress.enabled` | Enable Ingress resource | `false` |
-| `autoscaling.enabled` | Enable HorizontalPodAutoscaler | `false` |
+| `autoscaling.enabled` | Enable HorizontalPodAutoscaler (`autoscaling/v2`) | `false` |
 | `hostNetwork.enabled` | Enable host networking | `false` |
+| `strategy` | Rollout strategy (`RollingUpdate`/`Recreate` for Deployment; `RollingUpdate`/`OnDelete` for StatefulSet) | `{}` |
+| `networkPolicy.enabled` | Create a NetworkPolicy restricting ingress traffic | `false` |
+| `extraServices` | Additional multi-port Service resources alongside port-derived services | `[]` |
 
 ### Addons
 
@@ -184,6 +187,56 @@ addons:
 ```
 
 Supports optional path filtering (nginx sidecar proxy) and NetworkPolicy for defense-in-depth.
+
+### Rollout Strategy (`strategy`)
+
+Configure the rollout strategy for Deployments or StatefulSets. The same `strategy` value is used for both — it maps to `spec.strategy` on Deployments and `spec.updateStrategy` on StatefulSets.
+
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+```
+
+### NetworkPolicy (`networkPolicy`)
+
+Create a Kubernetes NetworkPolicy to restrict ingress traffic to the pod.
+
+```yaml
+networkPolicy:
+  enabled: true
+  # Allow ingress on all ports from .Values.ports (default). Set false for deny-all.
+  allowPortsIngress: true
+  # Or specify explicit ingress rules:
+  ingress:
+    - ports:
+        - port: 80
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+```
+
+### Extra Services (`extraServices`)
+
+Create additional Service resources with custom port mappings (e.g. for UDP discovery protocols or mixed-type services).
+
+```yaml
+extraServices:
+  - name: device-mgmt
+    type: LoadBalancer
+    ports:
+      - name: discovery
+        port: 29810
+        targetPort: discovery
+        protocol: UDP
+      - name: manager
+        port: 29811
+        targetPort: manager
+```
 
 ## Known Limitations
 

@@ -21,6 +21,7 @@ Each Kubernetes resource has a top-level template file (`templates/*.yaml`) that
 - `_pod.tpl` — pod template spec (containers, volumes, sidecars)
 - `_container.tpl` — main application container
 - `_deployment.tpl` / `_statefulset.tpl` — workload controllers
+- `_network_policy.tpl` — general-purpose NetworkPolicy
 - `_addons_*.tpl` — addon sidecar definitions
 
 ### Addon sidecar pattern
@@ -70,7 +71,7 @@ Traffic flow: `Cloudflare Tunnel -> cf-path-filter Service (ClusterIP) -> nginx 
 
 #### Known security considerations
 
-- `pathFilter.paths` values are interpolated directly into nginx config — no sanitization (schema should constrain with a pattern)
+- `pathFilter.paths` values are constrained by schema pattern `^/[a-zA-Z0-9/_.-]*$` but still interpolated directly into nginx config — validate upstream
 - The cf-path-filter Service is reachable by any pod in the cluster; use `networkPolicy` for isolation
 - When both `networkPolicy` and `pathFilter` are enabled, the NetworkPolicy allows the pathFilter port in addition to the targetPort
 
