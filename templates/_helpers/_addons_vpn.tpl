@@ -6,7 +6,7 @@ Gluetun VPN sidecar container configuration
 {{- if $vpn.enabled -}}
 - name: gluetun
   {{- with $vpn.image }}
-  image: {{ .repository | default "ghcr.io/qdm12/gluetun" }}:{{ .tag | default "latest" }}
+  image: {{ .repository | default "ghcr.io/qdm12/gluetun" }}:{{ .tag | default "v3.41.1" }}
   imagePullPolicy: {{ .pullPolicy | default "Always" }}
   {{- end }}
   securityContext:
@@ -26,10 +26,12 @@ Gluetun VPN sidecar container configuration
       value: {{ required "VPN provider name is required" $vpn.provider.name | quote }}
     - name: VPN_TYPE
       value: {{ required "VPN connection type is required" $vpn.provider.type | quote }}
-    - name: DOT
+    - name: DNS_SERVER
       value: "off"
-    - name: DNS_NAMESERVERS
-      value: "1.1.1.1,1.0.0.1"  # Cloudflare
+    - name: DNS_UPSTREAM_RESOLVER_TYPE
+      value: "plain"
+    - name: DNS_UPSTREAM_PLAIN_ADDRESSES
+      value: "1.1.1.1,1.0.0.1"
     {{- if eq $vpn.provider.type "openvpn" }}
     {{- if dig "openvpn" "auth" "existingSecret" nil $vpn }}
     - name: OPENVPN_USER
