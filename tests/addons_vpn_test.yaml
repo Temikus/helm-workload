@@ -47,7 +47,7 @@ tests:
           value: workload
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/qdm12/gluetun:latest
+          value: ghcr.io/qdm12/gluetun:v3.41.1
 
   - it: should add vpn sidecar to statefulset when enabled
     values:
