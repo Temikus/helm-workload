@@ -108,6 +108,18 @@ extraContainers: []
   #     - name: shared-logs
   #       mountPath: /var/log
 
+extraServices: []
+  # - name: device-mgmt
+  #   type: LoadBalancer
+  #   ports:
+  #     - name: discovery
+  #       port: 29810
+  #       targetPort: discovery
+  #       protocol: UDP
+  #     - name: manager
+  #       port: 29811
+  #       targetPort: manager
+
 extraVolumes: []
   # - name: shared-logs
   #   emptyDir: {}
@@ -185,9 +197,10 @@ addons:
     firewall: {}
     enabled: false
     image:
+      # renovate: datasource=docker depName=ghcr.io/qdm12/gluetun
       repository: ghcr.io/qdm12/gluetun
-      tag: latest
-      pullPolicy: Always
+      tag: v3.41.1
+      pullPolicy: IfNotPresent
     provider:
       name: ""
       type: "openvpn"
