@@ -33,3 +33,33 @@ spec:
 ---
 {{- end }}
 {{- end }}
+
+{{/*
+Extra services template — renders multi-port Service resources from .Values.extraServices
+*/}}
+{{- define "hwl.extraServices" -}}
+{{- range .Values.extraServices }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}-{{ include "hwl.fullname" $ }}
+  labels:
+    {{- include "hwl.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ default "ClusterIP" .type }}
+  ports:
+    {{- range .ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ default .name .targetPort }}
+      protocol: {{ default "TCP" .protocol }}
+    {{- end }}
+  selector:
+    {{- include "hwl.selectorLabels" $ | nindent 4 }}
+---
+{{- end }}
+{{- end }}

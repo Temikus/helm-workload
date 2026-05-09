@@ -600,6 +600,60 @@
         }
       }
     },
+    "extraServices": {
+      "type": "array",
+      "description": "Additional multi-port Service resources to create alongside port-derived services",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["name", "ports"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Service name (appended to release fullname)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+            "default": "ClusterIP",
+            "description": "Service type"
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Annotations to add to the service"
+          },
+          "ports": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name", "port"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Port name"
+                },
+                "port": {
+                  "type": "integer",
+                  "description": "Service port number"
+                },
+                "targetPort": {
+                  "type": ["integer", "string"],
+                  "description": "Target port on the container (name or number, defaults to port name)"
+                },
+                "protocol": {
+                  "type": "string",
+                  "enum": ["TCP", "UDP"],
+                  "default": "TCP",
+                  "description": "Protocol for the port"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "extraVolumes": {
       "type": "array",
       "description": "Additional volumes to add to the pod",

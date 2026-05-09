@@ -11,3 +11,7 @@
   {{- $_ := set .Values "_servicePorts" $servicePorts }}
   {{- include "hwl.service" . }}
 {{- end }}
+{{- /* Render extra services (multi-port, custom type, etc.) */ -}}
+{{- if .Values.extraServices }}
+  {{- include "hwl.extraServices" . }}
+{{- end }}
