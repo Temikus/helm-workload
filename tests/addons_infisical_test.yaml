@@ -1,0 +1,303 @@
+suite: test infisical addon
+templates:
+  - infisical.yaml
+  - deployment.yaml
+  - statefulset.yaml
+tests:
+  # ===========================================================================
+  # Default state: disabled
+  # ===========================================================================
+  - it: should not render an InfisicalSecret when disabled (default)
+    template: infisical.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not touch envFrom or annotations when disabled
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+      - notExists:
+          path: metadata.annotations
+
+  # ===========================================================================
+  # InfisicalSecret CR
+  # ===========================================================================
+  - it: should render an InfisicalSecret with defaults when enabled
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: InfisicalSecret
+      - equal:
+          path: apiVersion
+          value: secrets.infisical.com/v1alpha1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-workload-infisical
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+      - notExists:
+          path: spec.hostAPI
+      - equal:
+          path: spec.resyncInterval
+          value: 60
+      - equal:
+          path: spec.authentication.universalAuth.credentialsRef
+          value:
+            secretName: infisical-universal-auth
+            secretNamespace: NAMESPACE
+      - equal:
+          path: spec.authentication.universalAuth.secretsScope
+          value:
+            projectSlug: myproject
+            envSlug: prod
+            secretsPath: /
+      - equal:
+          path: spec.managedKubeSecretReferences
+          value:
+            - secretName: RELEASE-NAME-workload-infisical
+              secretNamespace: NAMESPACE
+              creationPolicy: Owner
+              template:
+                includeAllSecrets: true
+      - notExists:
+          path: spec.managedSecretReference
+
+  - it: should set standard labels
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: workload
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+
+  - it: should render all scope, host, and credential overrides
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          hostAPI: https://infisical.example.com/api
+          projectSlug: myproject
+          envSlug: prod
+          secretsPath: /myapp
+          recursive: true
+          credentialsSecret: my-creds
+          credentialsSecretNamespace: secrets
+          resyncInterval: 300
+          managedSecretName: my-managed
+          creationPolicy: Orphan
+    asserts:
+      - equal:
+          path: spec.hostAPI
+          value: https://infisical.example.com/api
+      - equal:
+          path: spec.resyncInterval
+          value: 300
+      - equal:
+          path: spec.authentication.universalAuth.credentialsRef
+          value:
+            secretName: my-creds
+            secretNamespace: secrets
+      - equal:
+          path: spec.authentication.universalAuth.secretsScope
+          value:
+            projectSlug: myproject
+            envSlug: prod
+            secretsPath: /myapp
+            recursive: true
+      - equal:
+          path: spec.managedKubeSecretReferences[0].secretName
+          value: my-managed
+      - equal:
+          path: spec.managedKubeSecretReferences[0].creationPolicy
+          value: Orphan
+
+  - it: should render keys as an operator secret template
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+          includeAllSecrets: false
+          keys:
+            DATABASE_URL: DB_CONNECTION_STRING
+            DB_PASS: POSTGRES_PASSWORD
+    asserts:
+      - equal:
+          path: spec.managedKubeSecretReferences[0].template
+          value:
+            includeAllSecrets: false
+            data:
+              DATABASE_URL: "{{ .DB_CONNECTION_STRING.Value }}"
+              DB_PASS: "{{ .POSTGRES_PASSWORD.Value }}"
+
+  # ===========================================================================
+  # Validation
+  # ===========================================================================
+  - it: should fail when projectSlug is missing
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          envSlug: prod
+    asserts:
+      - failedTemplate:
+          errorMessage: addons.infisical.projectSlug is required when addons.infisical.enabled is true
+
+  - it: should fail when envSlug is missing
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+    asserts:
+      - failedTemplate:
+          errorMessage: addons.infisical.envSlug is required when addons.infisical.enabled is true
+
+  - it: should fail when hostAPI lacks the /api path
+    template: infisical.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          hostAPI: https://infisical.example.com
+          projectSlug: myproject
+          envSlug: prod
+    asserts:
+      - failedTemplate:
+          errorPattern: addons.infisical.hostAPI must include the API path
+
+  # ===========================================================================
+  # Workload integration
+  # ===========================================================================
+  - it: should inject the managed Secret into the Deployment envFrom and set auto-reload
+    template: deployment.yaml
+    set:
+      env:
+        FOO: bar
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-workload
+            - secretRef:
+                name: RELEASE-NAME-workload-infisical
+      - equal:
+          path: metadata.annotations
+          value:
+            secrets.infisical.com/auto-reload: "true"
+
+  - it: should inject the managed Secret into a StatefulSet too
+    template: statefulset.yaml
+    set:
+      useStatefulSet: true
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+          managedSecretName: my-managed
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: my-managed
+      - equal:
+          path: metadata.annotations["secrets.infisical.com/auto-reload"]
+          value: "true"
+
+  - it: should place the managed Secret before user envFrom entries
+    template: deployment.yaml
+    set:
+      envFrom:
+        - secretRef:
+            name: override
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: RELEASE-NAME-workload-infisical
+            - secretRef:
+                name: override
+
+  - it: should not inject envFrom when injectEnvFrom is false
+    template: deployment.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+          injectEnvFrom: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+
+  - it: should not set auto-reload when autoReload is false
+    template: deployment.yaml
+    set:
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+          autoReload: false
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: should merge auto-reload with user annotations, user winning on clash
+    template: deployment.yaml
+    set:
+      annotations:
+        example.com/owner: me
+        secrets.infisical.com/auto-reload: "false"
+      addons:
+        infisical:
+          enabled: true
+          projectSlug: myproject
+          envSlug: prod
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            example.com/owner: me
+            secrets.infisical.com/auto-reload: "false"

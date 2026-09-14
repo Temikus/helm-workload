@@ -88,3 +88,14 @@ Default Service Port for Ingress
   {{- fail "Unable to determine default port" }}
 {{- end }}
 {{- end }}
+
+{{/*
+Deployment/StatefulSet metadata annotations: user-supplied ones win over addon-generated
+*/}}
+{{- define "hwl.workloadAnnotations" -}}
+{{- $ann := (include "hwl.infisical.annotations" . | fromYaml) -}}
+{{- $ann = mergeOverwrite $ann (.Values.annotations | default dict) -}}
+{{- with $ann }}
+{{- toYaml . }}
+{{- end }}
+{{- end }}

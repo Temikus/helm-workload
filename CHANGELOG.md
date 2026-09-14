@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-09-15
+
+### Added
+- `envFrom` passthrough for the main container (appended after chart-generated refs)
+- `secretEnv`: same shape as `env`, rendered into a chart-owned Secret instead of a ConfigMap
+- `annotations`: metadata annotations on the Deployment/StatefulSet object
+- `addons.infisical`: renders an `InfisicalSecret` CR (secrets-operator), injects the managed Secret via `envFrom`, and sets `secrets.infisical.com/auto-reload` on the workload
+
 ## [1.5.1] - 2025
 
 ### Fixed

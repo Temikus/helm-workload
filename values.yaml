@@ -32,6 +32,9 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
+# Annotations on the Deployment/StatefulSet object itself (not the pod template)
+annotations: {}
+
 podAnnotations: {}
 
 podSecurityContext: {}
@@ -123,6 +126,23 @@ extraServices: []
 extraVolumes: []
   # - name: shared-logs
   #   emptyDir: {}
+
+# Environment variables for the main container, rendered into a ConfigMap
+env: {}
+  # TZ: "UTC"
+
+# Same shape as env, rendered into a chart-owned Secret instead of a ConfigMap.
+# Use for values that must not land in a ConfigMap (e.g. vals/SOPS-resolved secrets).
+secretEnv: {}
+  # API_KEY: "ref+vault://..."
+
+# Extra envFrom entries for the main container, appended after the chart-generated
+# ConfigMap/Secret refs. Later entries win on key clash.
+envFrom: []
+  # - secretRef:
+  #     name: my-secret
+  # - configMapRef:
+  #     name: my-config
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -305,3 +325,27 @@ addons:
     # Optional NetworkPolicy restricting ingress to only the tunnel-bound port (defense-in-depth)
     networkPolicy:
       enabled: false
+  # Infisical secrets-operator addon - renders an InfisicalSecret CR that syncs a
+  # secrets path into a managed Kubernetes Secret and injects it via envFrom.
+  # Requires the operator (CRD secrets.infisical.com/v1alpha1) in the cluster.
+  infisical:
+    enabled: false
+    # Self-hosted instance API URL, e.g. https://infisical.example.com/api.
+    # Leave empty for Infisical Cloud.
+    hostAPI: ""
+    projectSlug: ""           # REQUIRED when enabled
+    envSlug: ""               # REQUIRED when enabled
+    secretsPath: "/"
+    recursive: false
+    # Universal-auth credentials Secret (keys: clientId, clientSecret), created out of band.
+    credentialsSecret: infisical-universal-auth
+    credentialsSecretNamespace: ""   # defaults to the release namespace
+    resyncInterval: 60
+    includeAllSecrets: true
+    # Rename map ENV_NAME: INFISICAL_KEY. Set includeAllSecrets: false to expose only these.
+    keys: {}
+      # DATABASE_URL: DB_CONNECTION_STRING
+    managedSecretName: ""     # defaults to {fullname}-infisical
+    creationPolicy: Owner     # or Orphan (Secret survives CR deletion)
+    injectEnvFrom: true       # add the managed Secret to the main container's envFrom
+    autoReload: true          # secrets.infisical.com/auto-reload on the workload

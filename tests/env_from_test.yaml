@@ -1,0 +1,99 @@
+suite: test envFrom on the main container
+templates:
+  - deployment.yaml
+  - statefulset.yaml
+tests:
+  - it: should not set envFrom by default
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+
+  - it: should only reference the env ConfigMap when only env is set
+    template: deployment.yaml
+    set:
+      env:
+        FOO: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-workload
+
+  - it: should pass through envFrom entries without a ConfigMap when env is not set
+    template: deployment.yaml
+    set:
+      envFrom:
+        - secretRef:
+            name: my-secret
+        - configMapRef:
+            name: my-config
+            optional: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: my-secret
+            - configMapRef:
+                name: my-config
+                optional: true
+
+  - it: should order chart-generated refs before user envFrom entries
+    template: deployment.yaml
+    set:
+      env:
+        FOO: bar
+      secretEnv:
+        TOKEN: abc
+      envFrom:
+        - secretRef:
+            name: my-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-workload
+            - secretRef:
+                name: RELEASE-NAME-workload-env
+            - secretRef:
+                name: my-secret
+
+  - it: should render envFrom on a StatefulSet too
+    template: statefulset.yaml
+    set:
+      useStatefulSet: true
+      env:
+        FOO: bar
+      envFrom:
+        - secretRef:
+            name: my-secret
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-workload
+            - secretRef:
+                name: my-secret
+
+  - it: should set workload annotations from the annotations value
+    template: deployment.yaml
+    set:
+      annotations:
+        example.com/owner: me
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            example.com/owner: me
+
+  - it: should not set workload annotations by default
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: metadata.annotations

@@ -75,10 +75,25 @@ volumeMounts:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if .Values.env }}
+{{- /* Later envFrom entries win on key clash: user refs override chart-generated ones */}}
+{{- $infisicalEnv := include "hwl.infisical.injectEnvFrom" . }}
+{{- if or .Values.env .Values.secretEnv .Values.envFrom $infisicalEnv }}
 envFrom:
+  {{- if .Values.env }}
   - configMapRef:
       name: {{ include "hwl.env-configMapName" . }}
+  {{- end }}
+  {{- if .Values.secretEnv }}
+  - secretRef:
+      name: {{ include "hwl.env-secretName" . }}
+  {{- end }}
+  {{- if $infisicalEnv }}
+  - secretRef:
+      name: {{ include "hwl.infisical.managedSecretName" . }}
+  {{- end }}
+  {{- with .Values.envFrom }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
 {{- end }}
 resources:
   {{- toYaml .Values.resources | nindent 2 }}

@@ -72,12 +72,52 @@
         }
       }
     },
+    "annotations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Annotations to add to the Deployment/StatefulSet object (not the pod template)"
+    },
     "podAnnotations": {
       "type": "object",
       "additionalProperties": {
         "type": "string"
       },
       "description": "Annotations to add to the pod"
+    },
+    "secretEnv": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Environment variables rendered into a chart-owned Secret (same shape as env)"
+    },
+    "envFrom": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "prefix": { "type": "string" },
+          "secretRef": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "optional": { "type": "boolean" }
+            }
+          },
+          "configMapRef": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "optional": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "description": "Extra envFrom entries appended after chart-generated ConfigMap/Secret refs"
     },
     "podSecurityContext": {
       "type": "object",
@@ -1271,6 +1311,89 @@
             "affinity": {
               "type": "object",
               "description": "Affinity rules for the PostgreSQL pod"
+            }
+          }
+        },
+        "infisical": {
+          "type": "object",
+          "description": "Infisical secrets-operator addon - renders an InfisicalSecret CR and injects the managed Secret via envFrom",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the Infisical addon"
+            },
+            "hostAPI": {
+              "type": "string",
+              "default": "",
+              "description": "Self-hosted Infisical API URL (e.g. https://infisical.example.com/api). Empty for Infisical Cloud"
+            },
+            "projectSlug": {
+              "type": "string",
+              "description": "Infisical project slug (required when enabled)"
+            },
+            "envSlug": {
+              "type": "string",
+              "description": "Infisical environment slug (required when enabled)"
+            },
+            "secretsPath": {
+              "type": "string",
+              "default": "/",
+              "description": "Secrets folder path to sync"
+            },
+            "recursive": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include secrets from subfolders"
+            },
+            "credentialsSecret": {
+              "type": "string",
+              "default": "infisical-universal-auth",
+              "description": "Name of the universal-auth credentials Secret (keys: clientId, clientSecret)"
+            },
+            "credentialsSecretNamespace": {
+              "type": "string",
+              "default": "",
+              "description": "Namespace of the credentials Secret (defaults to the release namespace)"
+            },
+            "resyncInterval": {
+              "type": "integer",
+              "minimum": 5,
+              "default": 60,
+              "description": "Operator resync interval in seconds"
+            },
+            "includeAllSecrets": {
+              "type": "boolean",
+              "default": true,
+              "description": "Sync every secret under secretsPath into the managed Secret"
+            },
+            "keys": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Rename map ENV_NAME: INFISICAL_KEY rendered into the managed Secret template"
+            },
+            "managedSecretName": {
+              "type": "string",
+              "default": "",
+              "description": "Managed Secret name (defaults to {fullname}-infisical)"
+            },
+            "creationPolicy": {
+              "type": "string",
+              "enum": ["Owner", "Orphan"],
+              "default": "Owner",
+              "description": "Managed Secret ownership policy"
+            },
+            "injectEnvFrom": {
+              "type": "boolean",
+              "default": true,
+              "description": "Add the managed Secret to the main container's envFrom"
+            },
+            "autoReload": {
+              "type": "boolean",
+              "default": true,
+              "description": "Set secrets.infisical.com/auto-reload on the workload so the operator restarts it on secret change"
             }
           }
         }
