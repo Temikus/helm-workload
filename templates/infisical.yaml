@@ -1,0 +1,3 @@
+{{- if ((.Values.addons.infisical).enabled) }}
+{{- include "hwl.infisical.secret" . }}
+{{- end }}

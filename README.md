@@ -115,6 +115,10 @@ All configuration is done through `values.yaml`. See the file for full documenta
 | `strategy` | Rollout strategy (`RollingUpdate`/`Recreate` for Deployment; `RollingUpdate`/`OnDelete` for StatefulSet) | `{}` |
 | `networkPolicy.enabled` | Create a NetworkPolicy restricting ingress traffic | `false` |
 | `extraServices` | Additional multi-port Service resources alongside port-derived services | `[]` |
+| `env` / `secretEnv` | Environment variables rendered into a ConfigMap / a Secret | `{}` |
+| `envFrom` | Extra `secretRef`/`configMapRef` entries for the main container | `[]` |
+| `annotations` | Annotations on the Deployment/StatefulSet object (pod template uses `podAnnotations`) | `{}` |
+| `addons.infisical.enabled` | Sync an Infisical secrets path into the container env via secrets-operator | `false` |
 
 ### Addons
 
@@ -187,6 +191,35 @@ addons:
 ```
 
 Supports optional path filtering (nginx sidecar proxy) and NetworkPolicy for defense-in-depth.
+
+#### Infisical (`addons.infisical`)
+
+Syncs a secrets folder from [Infisical](https://infisical.com) into a managed Kubernetes Secret via the [Infisical secrets-operator](https://infisical.com/docs/integrations/platforms/kubernetes/overview) and injects it into the main container's `envFrom`. Requires the operator in your cluster and a universal-auth credentials Secret (`clientId`/`clientSecret`) in the release namespace.
+
+```yaml
+addons:
+  infisical:
+    enabled: true
+    hostAPI: https://infisical.example.com/api   # omit for Infisical Cloud
+    projectSlug: myproject
+    envSlug: prod
+    secretsPath: /myapp
+    credentialsSecret: infisical-universal-auth  # default
+```
+
+Use `keys` to rename secrets on the way in (`ENV_NAME: INFISICAL_KEY`), combined with `includeAllSecrets: false` to expose only those. The workload gets the operator's `secrets.infisical.com/auto-reload` annotation so a rotated secret rolls the pods; set `autoReload: false` to opt out (for example when using [Reloader](https://github.com/stakater/Reloader) via `annotations`).
+
+### Environment Variables (`env`, `secretEnv`, `envFrom`)
+
+```yaml
+env:                      # rendered into a ConfigMap
+  TZ: UTC
+secretEnv:                # rendered into a chart-owned Secret
+  API_KEY: "ref+vault://..."
+envFrom:                  # appended after the generated refs; later entries win on key clash
+  - secretRef:
+      name: my-secret
+```
 
 ### Rollout Strategy (`strategy`)
 

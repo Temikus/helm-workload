@@ -22,7 +22,16 @@ Each Kubernetes resource has a top-level template file (`templates/*.yaml`) that
 - `_container.tpl` — main application container
 - `_deployment.tpl` / `_statefulset.tpl` — workload controllers
 - `_network_policy.tpl` — general-purpose NetworkPolicy
+- `_env_configmap.tpl` / `_env_secret.tpl` — `env` ConfigMap and `secretEnv` Secret
 - `_addons_*.tpl` — addon sidecar definitions
+
+### Main container envFrom (`_container.tpl`)
+
+Rendered in this order, later entries win on key clash: `env` ConfigMap, `secretEnv` Secret, Infisical managed Secret (when `addons.infisical.injectEnvFrom`), then user `envFrom`. Workload-level `metadata.annotations` come from `hwl.workloadAnnotations` (`_common.tpl`): addon-generated annotations merged under user `annotations`, user wins.
+
+### Infisical addon
+
+Renders one `InfisicalSecret` (`secrets.infisical.com/v1alpha1`) using `managedKubeSecretReferences` (the singular `managedSecretReference` is deprecated upstream). Universal auth only; the credentials Secret is referenced, never created. `keys` renders the operator's Go-template `data` (`"{{ .KEY.Value }}"`) so users never write operator template syntax. `hostAPI` must contain `/api` (enforced via `fail`) because the operator silently fails against the bare host. Reload uses the operator's own `secrets.infisical.com/auto-reload` annotation rather than Reloader to avoid an extra cluster dependency.
 
 ### Addon sidecar pattern
 

@@ -8,6 +8,10 @@ metadata:
   name: {{ include "hwl.fullname" . }}
   labels:
     {{- include "hwl.labels" . | nindent 4 }}
+  {{- with (include "hwl.workloadAnnotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
