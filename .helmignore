@@ -33,3 +33,6 @@ CONTRIBUTING.md
 CHANGELOG.md
 .github/
 docs/
+ci/
+.mise.toml
+renovate.json

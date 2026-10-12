@@ -1,0 +1,26 @@
+image:
+  repository: nginx
+  tag: "1.27"
+useStatefulSet: true
+ports:
+  - name: http
+    port: 80
+    service:
+      enabled: true
+persistence:
+  enabled: true
+  type: sts
+  size: 1Gi
+  mountPath: /data
+  extraVolumes:
+    - name: logs
+      size: 1Gi
+      mountPath: /logs
+volumes:
+  host:
+    - name: tz
+      hostPath:
+        path: /etc/localtime
+        type: File
+      containerPath:
+        path: /etc/localtime

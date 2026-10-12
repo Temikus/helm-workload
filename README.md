@@ -8,7 +8,7 @@ A general-purpose Kubernetes workload Helm chart with batteries included. Deploy
 ## Prerequisites
 
 - Kubernetes 1.26+
-- Helm 3.x
+- Helm 4
 
 ## Installation
 
@@ -279,16 +279,18 @@ extraServices:
 
 ### Prerequisites
 
-- [Helm](https://helm.sh/) 3.x
+- [Helm](https://helm.sh/) 4
 - [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin
+- [kubeconform](https://github.com/yannh/kubeconform) (or `mise install`)
 - [just](https://github.com/casey/just) (optional, for task automation)
 
 ### Commands
 
 ```bash
 just lint          # Lint the chart
-just test          # Run unit tests
-just test -u       # Update test snapshots
+just test          # Run unit tests and manifest validation
+just test unit -u  # Update test snapshots
+just test manifests 1.26.15  # Validate ci/*-values.yaml renders against a Kubernetes version
 just build         # Package the chart
 ```
 
