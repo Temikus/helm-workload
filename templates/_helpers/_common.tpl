@@ -92,6 +92,19 @@ Default Service Port for Ingress
 {{/*
 Deployment/StatefulSet metadata annotations: user-supplied ones win over addon-generated
 */}}
+{{/*
+Pod template checksums so env changes roll the pods.
+Hashes values, not the rendered object: its labels carry the chart version, which would restart pods on every chart bump.
+*/}}
+{{- define "hwl.podChecksumAnnotations" -}}
+{{- with .Values.env }}
+checksum/env: {{ toYaml . | sha256sum }}
+{{- end }}
+{{- with .Values.secretEnv }}
+checksum/secret-env: {{ toYaml . | sha256sum }}
+{{- end }}
+{{- end }}
+
 {{- define "hwl.workloadAnnotations" -}}
 {{- $ann := (include "hwl.infisical.annotations" . | fromYaml) -}}
 {{- $ann = mergeOverwrite $ann (.Values.annotations | default dict) -}}
