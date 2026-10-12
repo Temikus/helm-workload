@@ -32,9 +32,6 @@
       ]
     }
   ],
-  "automerge": true,
-  "automergeType": "pr",
-  "platformAutomerge": true,
   "packageRules": [
     {
       "matchDatasources": [
