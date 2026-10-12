@@ -1,0 +1,87 @@
+suite: test pod config checksum annotations
+templates:
+  - deployment.yaml
+  - statefulset.yaml
+tests:
+  - it: should add env checksum to deployment pod template
+    template: deployment.yaml
+    set:
+      env:
+        FOO: bar
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/env"]
+          value: 6de3033ebfa170ac12f50a4d40cf6a4b972e860a91dd283c1e16cf3e0d8388a1
+
+  - it: should change env checksum when env changes
+    template: deployment.yaml
+    set:
+      env:
+        FOO: baz
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/env"]
+          value: d89d7134699f492d606ff65de421ef025042725308341782500fa7c70a85b173
+
+  - it: should keep env checksum stable across chart version bumps
+    template: deployment.yaml
+    chart:
+      version: 9.9.9
+    set:
+      env:
+        FOO: bar
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/env"]
+          value: 6de3033ebfa170ac12f50a4d40cf6a4b972e860a91dd283c1e16cf3e0d8388a1
+
+  - it: should add secretEnv checksum
+    template: deployment.yaml
+    set:
+      secretEnv:
+        TOKEN: s3cret
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/secret-env"]
+          value: faccc0e303187c00098e4512a057982d20ccf10ae4f48b6747eecf9f7e427f2a
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/env"]
+
+  - it: should not add checksums when env and secretEnv are unset
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/env"]
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/secret-env"]
+
+  - it: should keep podAnnotations alongside checksums
+    template: deployment.yaml
+    set:
+      env:
+        FOO: bar
+      podAnnotations:
+        example.com/foo: bar
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["example.com/foo"]
+          value: bar
+      - exists:
+          path: spec.template.metadata.annotations["checksum/env"]
+
+  - it: should add env checksum to statefulset pod template
+    template: statefulset.yaml
+    set:
+      persistence:
+        enabled: true
+        type: statefulset
+        mountPath: /data
+        size: 1Gi
+      env:
+        FOO: bar
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.template.metadata.annotations["checksum/env"]
+          value: 6de3033ebfa170ac12f50a4d40cf6a4b972e860a91dd283c1e16cf3e0d8388a1

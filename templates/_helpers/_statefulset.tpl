@@ -31,6 +31,9 @@ spec:
         {{- end }}
       annotations:
         kubectl.kubernetes.io/default-container: {{ .Chart.Name }}
+        {{- with (include "hwl.podChecksumAnnotations" .) }}
+        {{- . | nindent 8 }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
