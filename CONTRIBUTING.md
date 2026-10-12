@@ -5,8 +5,9 @@ Thank you for your interest in contributing! This document provides guidelines f
 ## Development Setup
 
 1. Install prerequisites:
-   - [Helm](https://helm.sh/) 3.x
-   - [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin: `helm plugin install https://github.com/helm-unittest/helm-unittest`
+   - [Helm](https://helm.sh/) 4
+   - [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin: `helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest`
+   - [kubeconform](https://github.com/yannh/kubeconform), for `just test manifests` (or `mise install`)
    - [just](https://github.com/casey/just) (optional, for task automation)
 
 2. Clone the repository:
@@ -37,6 +38,7 @@ Every change should include corresponding tests:
 - Use `failedTemplate` assertions to test validation guards
 - Run `helm unittest .` to execute all tests
 - Run `helm unittest . -u` to update snapshots after intentional changes
+- Cover new values in `ci/*-values.yaml`; `just test manifests` validates those renders with kubeconform. A new CRD kind also needs its JSON schema in `ci/schemas/`
 
 ### Schema Validation
 
@@ -46,7 +48,7 @@ If you add or modify values, update `values.schema.json` accordingly. The schema
 
 1. Fork the repository and create a feature branch
 2. Make your changes with tests
-3. Ensure all tests pass: `helm unittest .`
+3. Ensure all tests pass: `just test`
 4. Ensure linting passes: `helm lint .`
 5. Submit a pull request with a clear description of the changes
 

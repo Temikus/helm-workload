@@ -1,0 +1,44 @@
+image:
+  repository: nginx
+  tag: "1.27"
+ports:
+  - name: http
+    port: 80
+    service:
+      enabled: true
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: example-tls
+      hosts:
+        - example.local
+autoscaling:
+  enabled: true
+env:
+  LOG_LEVEL: info
+secretEnv:
+  API_TOKEN: not-a-secret
+health:
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+networkPolicy:
+  enabled: true
+extraServices:
+  - name: metrics
+    type: ClusterIP
+    ports:
+      - name: metrics
+        port: 9090
+        targetPort: http

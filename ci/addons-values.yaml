@@ -1,0 +1,48 @@
+image:
+  repository: nginx
+  tag: "1.27"
+ports:
+  - name: http
+    port: 8080
+    service:
+      enabled: true
+addons:
+  init:
+    enabled: true
+    command: ["sh", "-c", "echo init"]
+  vpn:
+    enabled: true
+    provider:
+      name: mullvad
+      type: wireguard
+    wireguard:
+      privateKey: not-a-key
+      addresses:
+        - 10.0.0.2/32
+  postgres:
+    enabled: true
+    auth:
+      password: not-a-password
+  cloudflareTunnel:
+    enabled: true
+    fqdn: app.example.com
+    targetPort: 8080
+    pathFilter:
+      enabled: true
+      paths:
+        - /webhook
+    tunnel:
+      create: true
+      cloudflare:
+        accountId: "0123456789"
+        domain: example.com
+        email: ops@example.com
+        credentials:
+          apiToken: not-a-token
+    networkPolicy:
+      enabled: true
+  infisical:
+    enabled: true
+    hostAPI: https://app.infisical.com/api
+    projectSlug: example
+    envSlug: prod

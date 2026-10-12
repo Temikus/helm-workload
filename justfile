@@ -10,9 +10,16 @@ build: clean
 push *FLAGS:
     ./scripts/helm_push.sh {{FLAGS}}
 
-# Run unit tests. Pass -u to update snapshots.
+# Run all tests, or one suite: just test [unit [-u]|manifests [KUBERNETES_VERSION]]
+[positional-arguments]
 test *ARGS:
-    helm unittest {{ARGS}} .
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "${1:-}" in
+        unit) shift; helm unittest "$@" . ;;
+        manifests) shift; {{just_executable()}} _validate-manifests "$@" ;;
+        *) helm unittest "$@" . && {{just_executable()}} _validate-manifests ;;
+    esac
 
 # Update test snapshots
 update-snapshot:
@@ -56,3 +63,17 @@ release BUMP:
     git push origin "v${NEW_VERSION}"
 
     echo "Released v${NEW_VERSION}"
+
+# Validate manifests rendered from ci/*-values.yaml against Kubernetes schemas.
+# CRD schemas are vendored in ci/schemas: cloudflare-operator v0.13.1 (converted
+# with kubeconform's openapi2jsonschema.py) and Infisical from datreeio/CRDs-catalog.
+_validate-manifests KUBERNETES_VERSION="1.37.1":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for f in ci/*-values.yaml; do
+        echo "==> $f"
+        helm template ci . -f "$f" | kubeconform -strict -summary \
+            -kubernetes-version "{{KUBERNETES_VERSION}}" \
+            -schema-location default \
+            -schema-location 'ci/schemas/{{{{.ResourceKind}}_{{{{.ResourceAPIVersion}}.json'
+    done

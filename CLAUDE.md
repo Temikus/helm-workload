@@ -7,8 +7,9 @@ General-purpose Kubernetes workload Helm chart with addon sidecars (VPN, Postgre
 Run from this directory (`charts/workload`):
 
 - `just lint` — helm lint
-- `just test` — helm unittest
-- `just test -u` — update snapshots
+- `just test` — helm unittest + kubeconform on `ci/*-values.yaml`
+- `just test unit -u` — update snapshots
+- `just test manifests [k8s-version]` — kubeconform only
 - `helm unittest -f tests/<test_name>.yaml .` — run single test file
 
 ## Architecture
@@ -101,3 +102,4 @@ When modifying an addon:
 - `values.yaml` — default values
 - `values.schema.json` — JSON schema validation
 - `tests/addons_<name>_test.yaml` — unit tests
+- `ci/addons-values.yaml` — kubeconform render coverage (`just test manifests`); CRD kinds need a schema in `ci/schemas/`
