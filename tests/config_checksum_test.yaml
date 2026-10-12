@@ -85,3 +85,55 @@ tests:
       - equal:
           path: spec.template.metadata.annotations["checksum/env"]
           value: 6de3033ebfa170ac12f50a4d40cf6a4b972e860a91dd283c1e16cf3e0d8388a1
+
+  - it: should add pathFilter nginx config checksum
+    template: deployment.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: a.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: x
+          pathFilter:
+            enabled: true
+            paths:
+              - /webhook
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/cf-path-filter"]
+          value: ac5902cc9fd728cddd710ed34a129bb6088619593c0f1d0bd1575dbedc1a228a
+
+  - it: should change pathFilter checksum when paths change
+    template: deployment.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: a.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: x
+          pathFilter:
+            enabled: true
+            paths:
+              - /hooks
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/cf-path-filter"]
+          value: 38612cac86bf46b94088a74d1d61f09f20f264d10a7b56fe2bd6942b9a89cacb
+
+  - it: should not add pathFilter checksum when pathFilter is disabled
+    template: deployment.yaml
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: a.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: x
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/cf-path-filter"]
