@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `checksum/env` and `checksum/secret-env` pod template annotations, so changes to `env` or `secretEnv` roll the pods
+- `checksum/cf-path-filter` pod template annotation, so changes to the Cloudflare Tunnel `pathFilter` nginx config roll the pods
+
+### Fixed
+- Blank whitespace-only line rendered before the checksum pod annotations
 
 ## [1.9.0] - 2026-09-15
 

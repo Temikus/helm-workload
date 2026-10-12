@@ -171,8 +171,7 @@ cf-path-filter Service routes traffic to the pod via its podIP.
 Restrict cluster-level access to this proxy using networkPolicy if needed.
 */}}
 {{- define "hwl.cloudflareTunnel.pathFilter.configMap" -}}
-{{- $cf := .Values.addons.cloudflareTunnel -}}
-{{- $pf := $cf.pathFilter -}}
+{{- $pf := .Values.addons.cloudflareTunnel.pathFilter -}}
 {{- if not $pf.paths -}}
   {{- fail "addons.cloudflareTunnel.pathFilter.paths is required when pathFilter.enabled is true" -}}
 {{- end -}}
@@ -184,24 +183,33 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 data:
   nginx.conf: |
-    log_format security '[$time_local] $remote_addr - $http_x_real_ip - $http_x_forwarded_for - "$request_method $uri" $status';
-    server {
-        listen {{ $pf.port | default 8880 }};
-        server_tokens off;
-        access_log /dev/stdout security;
-        {{- range $pf.paths }}
-        location {{ . }} {
-            proxy_pass http://127.0.0.1:{{ $cf.targetPort }};
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-        {{- end }}
-        location / {
-            return 403;
-        }
+    {{- include "hwl.cloudflareTunnel.pathFilter.nginxConf" . | nindent 4 }}
+{{- end }}
+
+{{/*
+nginx.conf for the path-filter sidecar. Also hashed into a pod annotation (hwl.podChecksumAnnotations).
+*/}}
+{{- define "hwl.cloudflareTunnel.pathFilter.nginxConf" -}}
+{{- $cf := .Values.addons.cloudflareTunnel -}}
+{{- $pf := $cf.pathFilter -}}
+log_format security '[$time_local] $remote_addr - $http_x_real_ip - $http_x_forwarded_for - "$request_method $uri" $status';
+server {
+    listen {{ $pf.port | default 8880 }};
+    server_tokens off;
+    access_log /dev/stdout security;
+    {{- range $pf.paths }}
+    location {{ . }} {
+        proxy_pass http://127.0.0.1:{{ $cf.targetPort }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
+    {{- end }}
+    location / {
+        return 403;
+    }
+}
 {{- end }}
 
 {{/*

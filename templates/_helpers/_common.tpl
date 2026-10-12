@@ -103,6 +103,9 @@ checksum/env: {{ toYaml . | sha256sum }}
 {{- with .Values.secretEnv }}
 checksum/secret-env: {{ toYaml . | sha256sum }}
 {{- end }}
+{{- if ((.Values.addons.cloudflareTunnel).pathFilter).enabled }}
+checksum/cf-path-filter: {{ include "hwl.cloudflareTunnel.pathFilter.nginxConf" . | sha256sum }}
+{{- end }}
 {{- end }}
 
 {{- define "hwl.workloadAnnotations" -}}
