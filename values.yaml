@@ -241,7 +241,7 @@ addons:
     enabled: false
     image:
       repository: postgres
-      tag: 15-alpine
+      tag: 18-alpine
       pullPolicy: IfNotPresent
     auth:
       username: postgres
