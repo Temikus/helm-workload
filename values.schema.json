@@ -514,9 +514,19 @@
         }
       }
     },
+    "runtimeClassName": {
+      "type": "string",
+      "default": "",
+      "description": "Pod RuntimeClass, e.g. gvisor. Empty uses the node default."
+    },
+    "automountServiceAccountToken": {
+      "type": ["boolean", "null"],
+      "default": null,
+      "description": "Set false to keep the API token out of the pod. Null leaves the Kubernetes default."
+    },
     "networkPolicy": {
       "type": "object",
-      "description": "NetworkPolicy configuration for restricting ingress traffic to the pod",
+      "description": "NetworkPolicy configuration for restricting ingress and, optionally, egress traffic of the pod",
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -587,6 +597,18 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "egress": {
+          "type": "array",
+          "default": [],
+          "description": "Egress rules (NetworkPolicy spec.egress). Empty leaves egress unrestricted; non-empty adds Egress to policyTypes and denies everything else.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ports": { "type": "array", "items": { "type": "object" } },
+              "to": { "type": "array", "items": { "type": "object" } }
             }
           }
         }

@@ -165,3 +165,20 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[0].readOnly
           value: true
+  - it: should leave runtimeClassName and automountServiceAccountToken unset by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.runtimeClassName
+      - notExists:
+          path: spec.template.spec.automountServiceAccountToken
+  - it: should set runtimeClassName and disable the service account token
+    set:
+      runtimeClassName: gvisor
+      automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.template.spec.runtimeClassName
+          value: gvisor
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false

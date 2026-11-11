@@ -185,6 +185,12 @@ health:
 hostNetwork:
   enabled: false
 
+# Pod RuntimeClass, e.g. "gvisor". Empty uses the node default.
+runtimeClassName: ""
+
+# Set false to keep the API token out of the pod. Null leaves the Kubernetes default.
+automountServiceAccountToken: null
+
 networkPolicy:
   enabled: false
   # Automatically allow ingress on all ports defined in .Values.ports from anywhere.
@@ -202,6 +208,13 @@ networkPolicy:
     #     - podSelector:
     #         matchLabels:
     #           app: frontend
+  # Egress rules, rendered as spec.egress. Empty leaves egress unrestricted;
+  # non-empty adds Egress to policyTypes, so anything not listed is denied.
+  egress: []
+    # - to:
+    #     - ipBlock:
+    #         cidr: 0.0.0.0/0
+    #         except: [10.0.0.0/8]
 
 addons:
   init:

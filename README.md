@@ -113,7 +113,9 @@ All configuration is done through `values.yaml`. See the file for full documenta
 | `autoscaling.enabled` | Enable HorizontalPodAutoscaler (`autoscaling/v2`) | `false` |
 | `hostNetwork.enabled` | Enable host networking | `false` |
 | `strategy` | Rollout strategy (`RollingUpdate`/`Recreate` for Deployment; `RollingUpdate`/`OnDelete` for StatefulSet) | `{}` |
-| `networkPolicy.enabled` | Create a NetworkPolicy restricting ingress traffic | `false` |
+| `networkPolicy.enabled` | Create a NetworkPolicy restricting ingress traffic (and egress, with `networkPolicy.egress`) | `false` |
+| `runtimeClassName` | Pod RuntimeClass, e.g. `gvisor` | `""` |
+| `automountServiceAccountToken` | Set `false` to keep the API token out of the pod; `null` keeps the Kubernetes default | `null` |
 | `extraServices` | Additional multi-port Service resources alongside port-derived services | `[]` |
 | `env` / `secretEnv` | Environment variables rendered into a ConfigMap / a Secret | `{}` |
 | `envFrom` | Extra `secretRef`/`configMapRef` entries for the main container | `[]` |
@@ -251,6 +253,30 @@ networkPolicy:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
+```
+
+`egress` is empty by default, which leaves egress unrestricted. Any rule adds
+`Egress` to `policyTypes`, so traffic it doesn't list is denied, DNS included.
+For example, DNS plus the public internet only:
+
+```yaml
+networkPolicy:
+  enabled: true
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16]
 ```
 
 ### Extra Services (`extraServices`)
