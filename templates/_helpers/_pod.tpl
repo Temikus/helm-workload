@@ -7,6 +7,12 @@ imagePullSecrets:
   {{- toYaml . | nindent 2 }}
 {{- end -}}
 serviceAccountName: {{ include "hwl.serviceAccountName" . }}
+{{- if not (kindIs "invalid" .Values.automountServiceAccountToken) }}
+automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+{{- end }}
+{{- with .Values.runtimeClassName }}
+runtimeClassName: {{ . }}
+{{- end }}
 {{- if (.Values.shareProcessNamespace) }}
 shareProcessNamespace: true
 {{- end }}

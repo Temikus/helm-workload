@@ -186,3 +186,49 @@ tests:
       - equal:
           path: spec.ingress[0].ports[0].port
           value: 443
+
+  - it: should leave egress unrestricted by default
+    set:
+      networkPolicy:
+        enabled: true
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+      - notExists:
+          path: spec.egress
+
+  - it: should restrict egress to the given rules
+    set:
+      networkPolicy:
+        enabled: true
+        allowPortsIngress: false
+        egress:
+          - to:
+              - ipBlock:
+                  cidr: 0.0.0.0/0
+                  except:
+                    - 10.0.0.0/8
+            ports:
+              - port: 443
+                protocol: TCP
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+            - Egress
+      - equal:
+          path: spec.egress
+          value:
+            - to:
+                - ipBlock:
+                    cidr: 0.0.0.0/0
+                    except:
+                      - 10.0.0.0/8
+              ports:
+                - port: 443
+                  protocol: TCP
+      - isEmpty:
+          path: spec.ingress

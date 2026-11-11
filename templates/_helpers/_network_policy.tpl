@@ -1,6 +1,7 @@
 {{/*
 NetworkPolicy template
-Restricts ingress traffic to the pod based on configured rules.
+Restricts ingress traffic to the pod based on configured rules, and egress
+too when egress rules are given.
 */}}
 {{- define "hwl.networkPolicy" -}}
 {{- $np := .Values.networkPolicy -}}
@@ -16,6 +17,11 @@ spec:
       {{- include "hwl.selectorLabels" . | nindent 6 }}
   policyTypes:
     - Ingress
+{{- with $np.egress }}
+    - Egress
+  egress:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
 {{- if $np.ingress }}
   ingress:
     {{- range $np.ingress }}

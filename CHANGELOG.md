@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `runtimeClassName` and `automountServiceAccountToken` on the pod spec
+- `networkPolicy.egress`: egress rules; non-empty adds `Egress` to `policyTypes`
 - `checksum/env` and `checksum/secret-env` pod template annotations, so changes to `env` or `secretEnv` roll the pods
 - `checksum/cf-path-filter` pod template annotation, so changes to the Cloudflare Tunnel `pathFilter` nginx config roll the pods
 
