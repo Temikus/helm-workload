@@ -232,7 +232,7 @@ addons:
     image:
       # renovate: datasource=docker depName=ghcr.io/qdm12/gluetun
       repository: ghcr.io/qdm12/gluetun
-      tag: v3.41.1
+      tag: v3.41.3
       pullPolicy: IfNotPresent
     provider:
       name: ""
