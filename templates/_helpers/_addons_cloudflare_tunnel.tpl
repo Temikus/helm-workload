@@ -150,8 +150,7 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 spec:
   podSelector:
-    matchLabels:
-      {{- include "hwl.selectorLabels" . | nindent 6 }}
+    {{- include "hwl.mainPodSelector" . | nindent 4 }}
   policyTypes:
     - Ingress
   ingress:

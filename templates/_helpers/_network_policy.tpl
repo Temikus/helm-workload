@@ -13,8 +13,7 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 spec:
   podSelector:
-    matchLabels:
-      {{- include "hwl.selectorLabels" . | nindent 6 }}
+    {{- include "hwl.mainPodSelector" . | nindent 4 }}
   policyTypes:
     - Ingress
 {{- with $np.egress }}
@@ -37,7 +36,8 @@ spec:
         {{- toYaml .from | nindent 8 }}
       {{- end }}
     {{- end }}
-{{- else if $np.allowPortsIngress }}
+{{- /* A rule with no ports allows every port, so no ports means deny-all. */}}
+{{- else if and $np.allowPortsIngress .Values.ports }}
   ingress:
     - ports:
     {{- range .Values.ports }}

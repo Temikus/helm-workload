@@ -889,6 +889,32 @@ tests:
           path: spec.podSelector.matchLabels["app.kubernetes.io/name"]
           value: workload
 
+  - it: NetworkPolicy should not select the postgres addon pod
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 1
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnelRef:
+            name: shared-tunnel
+          networkPolicy:
+            enabled: true
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.podSelector.matchExpressions
+          value:
+            - key: app.kubernetes.io/component
+              operator: NotIn
+              values:
+                - postgres
+
   - it: should create all 4 resources when tunnel.create (inline creds) and networkPolicy.enabled
     values:
       - ../values.yaml
