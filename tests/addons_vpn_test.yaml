@@ -27,6 +27,9 @@ tests:
       addons:
         vpn:
           enabled: true
+          image:
+            repository: example.com/gluetun
+            tag: v1.2.3
           provider:
             name: mullvad
             type: openvpn
@@ -48,7 +51,7 @@ tests:
           value: workload
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/qdm12/gluetun:v3.41.1
+          value: example.com/gluetun:v1.2.3
 
   - it: should add vpn sidecar to statefulset when enabled
     values:

@@ -91,7 +91,8 @@ Traffic flow: `Cloudflare Tunnel -> cf-path-filter Service (ClusterIP) -> nginx 
 - The `templates:` list at top of test file must include all templates referenced by tests (e.g. both `cloudflare_tunnel.yaml` and `deployment.yaml` for pod-level tests)
 - Use `documentIndex` based on **rendering order**, not kind-alphabetical order
 - Use `failedTemplate` assertion to test `fail` guards
-- Snapshot tests exist for deployment, ingress, and service — run `just test -u` after version bumps
+- Snapshot tests exist for deployment, ingress, and service
+- Tests must not depend on default image tags or the chart version, so Renovate and release bumps pass untouched: set `image` in the test before asserting on it, and match `helm.sh/chart` with a regex
 
 ## Files to update together
 

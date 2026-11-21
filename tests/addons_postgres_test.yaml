@@ -22,6 +22,9 @@ tests:
       addons:
         postgres:
           enabled: true
+          image:
+            repository: example.com/postgres
+            tag: 1.2.3
           auth:
             username: postgres
             password: postgres-password
@@ -36,7 +39,7 @@ tests:
           value: postgres
       - equal:
           path: spec.template.spec.containers[0].image
-          value: postgres:15-alpine
+          value: example.com/postgres:1.2.3
       - equal:
           path: spec.strategy.type
           value: Recreate
