@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `podMonitor`: opt-in Prometheus Operator PodMonitor for the main pods, with extra `labels` and pass-through `endpoints`; the Postgres addon pod is not selected
+
 ## [1.12.0] - 2026-11-21
 
 ### Added

@@ -614,6 +614,29 @@
         }
       }
     },
+    "podMonitor": {
+      "type": "object",
+      "description": "Prometheus Operator PodMonitor for the main workload pods",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Create a PodMonitor. Needs the monitoring.coreos.com CRDs in the cluster."
+        },
+        "labels": {
+          "type": "object",
+          "default": {},
+          "description": "Extra labels on the PodMonitor, e.g. the release label a kube-prometheus-stack Prometheus selects on",
+          "additionalProperties": { "type": "string" }
+        },
+        "endpoints": {
+          "type": "array",
+          "default": [],
+          "description": "Rendered as spec.podMetricsEndpoints. Required when enabled.",
+          "items": { "type": "object" }
+        }
+      }
+    },
     "volumes": {
       "type": "object",
       "properties": {

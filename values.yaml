@@ -216,6 +216,19 @@ networkPolicy:
     #         cidr: 0.0.0.0/0
     #         except: [10.0.0.0/8]
 
+# Prometheus Operator PodMonitor for the main pods. Needs the
+# monitoring.coreos.com CRDs in the cluster.
+podMonitor:
+  enabled: false
+  # Extra labels on the PodMonitor. kube-prometheus-stack only picks up
+  # monitors labelled with its release name, e.g. `release: monitoring`.
+  labels: {}
+  # Rendered as spec.podMetricsEndpoints. Required when enabled.
+  endpoints: []
+    # - port: http
+    #   path: /metrics
+    #   interval: 60s
+
 addons:
   # Init container in the main pod: runs under the top-level runtimeClassName.
   init:
