@@ -159,6 +159,8 @@ addons:
         countries: Sweden
 ```
 
+Gluetun shares the pod's network namespace, so its control server (`:8000`) and any HTTP proxy or Shadowsocks server it runs listen on the pod IP. Set `addons.vpn.networkPolicy.enabled: true` to allow ingress only on the pod's declared container ports (`ports`, `extraContainers[].ports`, and the Cloudflare `pathFilter` port), from any source. It is a no-op when `networkPolicy.enabled` or `addons.cloudflareTunnel.networkPolicy.enabled` is set, because those policies already block the gluetun ports and a second policy would only widen them.
+
 #### PostgreSQL (`addons.postgres`)
 
 Adds a PostgreSQL sidecar with persistent storage. Useful for applications that need a dedicated database.
@@ -174,7 +176,13 @@ addons:
     persistence:
       enabled: true
       size: 8Gi
+    runtimeClassName: ""    # not inherited from the top-level runtimeClassName
+    networkPolicy:
+      enabled: true         # 5432 only from this release's main pods
+      from: []              # extra peers, e.g. another release in the namespace
 ```
+
+The Postgres pod is its own Deployment, so it does not inherit the top-level `runtimeClassName`. `networkPolicy` is off by default because other releases in the same namespace may connect to this database; list them in `from` before enabling it.
 
 #### Cloudflare Tunnel (`addons.cloudflareTunnel`)
 
@@ -193,6 +201,8 @@ addons:
 ```
 
 Supports optional path filtering (nginx sidecar proxy) and NetworkPolicy for defense-in-depth.
+
+With `tunnel.create: true`, `tunnel.runtimeClassName` sets the RuntimeClass of the operator's cloudflared pod through the CR's `deployPatch`. A tunnel referenced with `tunnelRef` is managed elsewhere, so its pod can't be changed from here.
 
 #### Infisical (`addons.infisical`)
 

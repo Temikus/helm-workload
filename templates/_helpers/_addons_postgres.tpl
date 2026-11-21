@@ -38,6 +38,9 @@ spec:
       labels:
         {{- include "hwl.postgres.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with $postgres.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
       {{- if $postgres.securityContext }}
       {{- if $postgres.securityContext.fsGroup }}
       securityContext:
@@ -173,6 +176,36 @@ spec:
   selector:
     {{- include "hwl.postgres.selectorLabels" . | nindent 4 }}
 {{- end }}
+{{- end }}
+
+{{/*
+Postgres NetworkPolicy: 5432 only from this release's main pods and the
+extra peers in networkPolicy.from.
+*/}}
+{{- define "hwl.postgres.networkPolicy" -}}
+{{- $postgres := .Values.addons.postgres -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "hwl.fullname" . }}-postgres
+  labels:
+    {{- include "hwl.postgres.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "hwl.postgres.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 5432
+      from:
+        - podSelector:
+            {{- include "hwl.mainPodSelector" . | nindent 12 }}
+        {{- with (($postgres.networkPolicy).from) }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
 {{- end }}
 
 {{/*

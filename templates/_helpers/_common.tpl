@@ -49,6 +49,20 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+LabelSelector for this release's main workload pods. The postgres addon pod
+carries the same selector labels and differs only by its component label.
+*/}}
+{{- define "hwl.mainPodSelector" -}}
+matchLabels:
+  {{- include "hwl.selectorLabels" . | nindent 2 }}
+matchExpressions:
+  - key: app.kubernetes.io/component
+    operator: NotIn
+    values:
+      - postgres
+{{- end }}
+
+{{/*
 Service Account Name
 */}}
 {{- define "hwl.serviceAccountName" -}}

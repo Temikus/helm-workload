@@ -1420,3 +1420,60 @@ tests:
       - lengthEqual:
           path: spec.template.spec.containers
           count: 1
+
+  # ===========================================================================
+  # cloudflared runtimeClassName via deployPatch
+  # ===========================================================================
+  - it: should not render deployPatch on the Tunnel by default
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    set:
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                existingSecret: my-cf-secret
+    asserts:
+      - isKind:
+          of: ClusterTunnel
+      - notExists:
+          path: spec.deployPatch
+
+  - it: should set the cloudflared runtimeClassName through deployPatch
+    values:
+      - ../values.yaml
+    template: cloudflare_tunnel.yaml
+    documentIndex: 0
+    set:
+      runtimeClassName: ignored-for-cloudflared
+      addons:
+        cloudflareTunnel:
+          enabled: true
+          fqdn: myapp.example.com
+          targetPort: 8080
+          tunnel:
+            create: true
+            kind: Tunnel
+            runtimeClassName: gvisor
+            cloudflare:
+              accountId: abc123
+              domain: example.com
+              email: admin@example.com
+              credentials:
+                existingSecret: my-cf-secret
+    asserts:
+      - isKind:
+          of: Tunnel
+      - equal:
+          path: spec.deployPatch
+          value: '{"spec":{"template":{"spec":{"runtimeClassName":"gvisor"}}}}'

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `addons.postgres.runtimeClassName`: RuntimeClass for the Postgres pod; not inherited from the top-level `runtimeClassName`
+- `addons.cloudflareTunnel.tunnel.runtimeClassName`: RuntimeClass for the operator's cloudflared pod, via the Tunnel CR's `deployPatch`
+- `addons.postgres.networkPolicy`: opt-in NetworkPolicy allowing 5432 only from this release's main pods plus `from` peers
+- `addons.vpn.networkPolicy`: opt-in NetworkPolicy allowing ingress only on declared container ports, so other pods can't reach gluetun's control server or proxies
 - `runtimeClassName` and `automountServiceAccountToken` on the pod spec
 - `networkPolicy.egress`: egress rules; non-empty adds `Egress` to `policyTypes`
 - `checksum/env` and `checksum/secret-env` pod template annotations, so changes to `env` or `secretEnv` roll the pods

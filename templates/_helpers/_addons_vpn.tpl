@@ -124,3 +124,45 @@ Gluetun volumes
   {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+VPN NetworkPolicy. Gluetun shares the pod's network namespace, so its control
+server (:8000) and any HTTP proxy/Shadowsocks it runs listen on the pod IP.
+Allows ingress only on the pod's declared container ports, from anywhere.
+*/}}
+{{- define "hwl.gluetun.networkPolicy" -}}
+{{- $ports := list -}}
+{{- range .Values.ports }}
+{{- $ports = append $ports (dict "port" .port "protocol" (.protocol | default "TCP")) -}}
+{{- end }}
+{{- range .Values.extraContainers }}
+{{- range .ports }}
+{{- $ports = append $ports (dict "port" .containerPort "protocol" (.protocol | default "TCP")) -}}
+{{- end }}
+{{- end }}
+{{- if ((.Values.addons.cloudflareTunnel).pathFilter).enabled }}
+{{- $ports = append $ports (dict "port" (.Values.addons.cloudflareTunnel.pathFilter.port | default 8880) "protocol" "TCP") -}}
+{{- end -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "hwl.fullname" . }}-vpn
+  labels:
+    {{- include "hwl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    {{- include "hwl.mainPodSelector" . | nindent 4 }}
+  policyTypes:
+    - Ingress
+  {{- /* An empty ports list would allow every port, so no ports means deny-all. */}}
+  {{- if $ports }}
+  ingress:
+    - ports:
+        {{- range uniq $ports }}
+        - protocol: {{ .protocol }}
+          port: {{ .port }}
+        {{- end }}
+  {{- else }}
+  ingress: []
+  {{- end }}
+{{- end }}

@@ -3,6 +3,7 @@ suite: test addons integration
 templates:
   - deployment.yaml
   - statefulset.yaml
+  - vpn.yaml
 tests:
   - it: should not add vpn sidecar to deployment by default
     values:
@@ -156,3 +157,216 @@ tests:
       - matchRegex:
           path: spec.template.spec.containers[0].env[?(@.name == "OPENVPN_PASSWORD")].value
           pattern: test-pass
+
+  - it: should inherit the top-level runtimeClassName for the gluetun sidecar
+    values:
+      - ../values.yaml
+    template: deployment.yaml
+    set:
+      runtimeClassName: gvisor
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+    asserts:
+      - equal:
+          path: spec.template.spec.runtimeClassName
+          value: gvisor
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: gluetun
+
+  - it: should not render the VPN NetworkPolicy by default
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render the VPN NetworkPolicy when the VPN is disabled
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    set:
+      addons:
+        vpn:
+          networkPolicy:
+            enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should allow only declared container ports when enabled
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    release:
+      name: myapp
+    set:
+      ports:
+        - name: http
+          port: 8080
+        - name: dht
+          port: 6881
+          protocol: UDP
+      extraContainers:
+        - name: exporter
+          image: exporter:1.0
+          ports:
+            - containerPort: 9100
+            - containerPort: 8080
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+          networkPolicy:
+            enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: metadata.name
+          value: myapp-workload-vpn
+      - equal:
+          path: spec.podSelector
+          value:
+            matchLabels:
+              app.kubernetes.io/name: workload
+              app.kubernetes.io/instance: myapp
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: NotIn
+                values:
+                  - postgres
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+      - equal:
+          path: spec.ingress
+          value:
+            - ports:
+                - protocol: TCP
+                  port: 8080
+                - protocol: UDP
+                  port: 6881
+                - protocol: TCP
+                  port: 9100
+
+  - it: should allow the Cloudflare path-filter port when the sidecar is enabled
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    set:
+      ports:
+        - name: http
+          port: 8080
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+          networkPolicy:
+            enabled: true
+        cloudflareTunnel:
+          pathFilter:
+            enabled: true
+            port: 8881
+            paths:
+              - /webhook
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports
+          value:
+            - protocol: TCP
+              port: 8080
+            - protocol: TCP
+              port: 8881
+
+  - it: should deny all ingress when no ports are declared
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+          networkPolicy:
+            enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isEmpty:
+          path: spec.ingress
+
+  - it: should skip the VPN NetworkPolicy when networkPolicy is enabled
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    set:
+      networkPolicy:
+        enabled: true
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+          networkPolicy:
+            enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should skip the VPN NetworkPolicy when the Cloudflare Tunnel NetworkPolicy is enabled
+    values:
+      - ../values.yaml
+    template: vpn.yaml
+    set:
+      addons:
+        vpn:
+          enabled: true
+          provider:
+            name: mullvad
+            type: wireguard
+          wireguard:
+            privateKey: k
+          networkPolicy:
+            enabled: true
+        cloudflareTunnel:
+          enabled: true
+          networkPolicy:
+            enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0

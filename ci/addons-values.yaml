@@ -21,8 +21,15 @@ addons:
         - 10.0.0.2/32
   postgres:
     enabled: true
+    runtimeClassName: runc
     auth:
       password: not-a-password
+    networkPolicy:
+      enabled: true
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: backup
   cloudflareTunnel:
     enabled: true
     fqdn: app.example.com
@@ -33,6 +40,7 @@ addons:
         - /webhook
     tunnel:
       create: true
+      runtimeClassName: gvisor
       cloudflare:
         accountId: "0123456789"
         domain: example.com
