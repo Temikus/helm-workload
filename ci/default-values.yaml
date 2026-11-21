@@ -35,6 +35,14 @@ health:
       port: http
 networkPolicy:
   enabled: true
+podMonitor:
+  enabled: true
+  labels:
+    release: monitoring
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 60s
 extraServices:
   - name: metrics
     type: ClusterIP

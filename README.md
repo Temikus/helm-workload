@@ -114,6 +114,7 @@ All configuration is done through `values.yaml`. See the file for full documenta
 | `hostNetwork.enabled` | Enable host networking | `false` |
 | `strategy` | Rollout strategy (`RollingUpdate`/`Recreate` for Deployment; `RollingUpdate`/`OnDelete` for StatefulSet) | `{}` |
 | `networkPolicy.enabled` | Create a NetworkPolicy restricting ingress traffic (and egress, with `networkPolicy.egress`) | `false` |
+| `podMonitor.enabled` | Create a Prometheus Operator PodMonitor for the main pods | `false` |
 | `runtimeClassName` | Pod RuntimeClass, e.g. `gvisor` | `""` |
 | `automountServiceAccountToken` | Set `false` to keep the API token out of the pod; `null` keeps the Kubernetes default | `null` |
 | `extraServices` | Additional multi-port Service resources alongside port-derived services | `[]` |
@@ -288,6 +289,28 @@ networkPolicy:
             cidr: 0.0.0.0/0
             except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16]
 ```
+
+### PodMonitor (`podMonitor`)
+
+Create a Prometheus Operator `PodMonitor` that scrapes the main pods. The
+Postgres addon pod is not selected. The cluster needs the
+`monitoring.coreos.com` CRDs.
+
+```yaml
+podMonitor:
+  enabled: true
+  # kube-prometheus-stack ignores monitors without its release label.
+  labels:
+    release: monitoring
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 60s
+```
+
+`endpoints` is rendered as `spec.podMetricsEndpoints` unchanged, so any
+[PodMetricsEndpoint](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PodMetricsEndpoint)
+field works. `port` is a container port name from `ports`.
 
 ### Extra Services (`extraServices`)
 
