@@ -232,3 +232,25 @@ tests:
                   protocol: TCP
       - isEmpty:
           path: spec.ingress
+
+  - it: should not select the postgres addon pod
+    set:
+      networkPolicy:
+        enabled: true
+    asserts:
+      - equal:
+          path: spec.podSelector.matchExpressions
+          value:
+            - key: app.kubernetes.io/component
+              operator: NotIn
+              values:
+                - postgres
+
+  - it: should deny all ingress when allowPortsIngress is set but no ports are declared
+    set:
+      networkPolicy:
+        enabled: true
+      ports: []
+    asserts:
+      - isEmpty:
+          path: spec.ingress

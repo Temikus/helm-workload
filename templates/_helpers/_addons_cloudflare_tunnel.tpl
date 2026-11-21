@@ -65,6 +65,10 @@ spec:
     name: {{ $cf.tunnel.name | default (printf "%s-tunnel" (include "hwl.fullname" .)) }}
   fallbackTarget: {{ $cf.tunnel.fallbackTarget | default "http_status:404" }}
   noTlsVerify: {{ $cf.tunnel.noTlsVerify | default false }}
+  {{- /* The operator strategic-merges deployPatch into the cloudflared Deployment. */}}
+  {{- with $cf.tunnel.runtimeClassName }}
+  deployPatch: {{ dict "spec" (dict "template" (dict "spec" (dict "runtimeClassName" .))) | toJson | quote }}
+  {{- end }}
 {{- end }}
 {{- end }}
 
@@ -146,8 +150,7 @@ metadata:
     {{- include "hwl.labels" . | nindent 4 }}
 spec:
   podSelector:
-    matchLabels:
-      {{- include "hwl.selectorLabels" . | nindent 6 }}
+    {{- include "hwl.mainPodSelector" . | nindent 4 }}
   policyTypes:
     - Ingress
   ingress:

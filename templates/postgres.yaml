@@ -3,4 +3,8 @@
 {{- include "hwl.postgres.deployment" . }}
 ---
 {{- include "hwl.postgres.service" . }}
+{{- if ((.Values.addons.postgres).networkPolicy).enabled }}
+---
+{{- include "hwl.postgres.networkPolicy" . }}
+{{- end }}
 {{- end }}

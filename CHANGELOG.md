@@ -7,9 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-21
+
+### Added
+- `addons.postgres.runtimeClassName`: RuntimeClass for the Postgres pod; not inherited from the top-level `runtimeClassName`
+- `addons.cloudflareTunnel.tunnel.runtimeClassName`: RuntimeClass for the operator's cloudflared pod, via the Tunnel CR's `deployPatch`
+- `addons.postgres.networkPolicy`: opt-in NetworkPolicy allowing 5432 only from this release's main pods plus `from` peers
+- `addons.vpn.networkPolicy`: opt-in NetworkPolicy allowing ingress only on declared container ports, so other pods can't reach gluetun's control server or proxies
+
+### Fixed
+- `networkPolicy` and `addons.cloudflareTunnel.networkPolicy` no longer select the Postgres addon pod, which they shared labels with and so cut off from its clients
+- `networkPolicy.allowPortsIngress` with no `ports` declared rendered a rule allowing every port; it now denies all ingress
+
+## [1.11.0] - 2026-11-11
+
 ### Added
 - `runtimeClassName` and `automountServiceAccountToken` on the pod spec
 - `networkPolicy.egress`: egress rules; non-empty adds `Egress` to `policyTypes`
+
+## [1.10.1] - 2026-10-13
+
+### Changed
+- CI: pin tool versions, validate rendered manifests, and guard releases
+
+## [1.10.0] - 2026-10-13
+
+### Added
 - `checksum/env` and `checksum/secret-env` pod template annotations, so changes to `env` or `secretEnv` roll the pods
 - `checksum/cf-path-filter` pod template annotation, so changes to the Cloudflare Tunnel `pathFilter` nginx config roll the pods
 

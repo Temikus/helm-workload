@@ -1,0 +1,10 @@
+{{- /*
+Skipped when networkPolicy or cloudflareTunnel.networkPolicy already selects the
+main pod: each already denies the gluetun ports, and policies are additive, so a
+second allow-list here would widen theirs.
+*/}}
+{{- $cf := .Values.addons.cloudflareTunnel | default dict }}
+{{- $otherPolicy := or ((.Values.networkPolicy).enabled) (and $cf.enabled ($cf.networkPolicy).enabled) }}
+{{- if and ((.Values.addons.vpn).enabled) (((.Values.addons.vpn).networkPolicy).enabled) (not $otherPolicy) }}
+{{- include "hwl.gluetun.networkPolicy" . }}
+{{- end }}

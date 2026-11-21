@@ -217,6 +217,7 @@ networkPolicy:
     #         except: [10.0.0.0/8]
 
 addons:
+  # Init container in the main pod: runs under the top-level runtimeClassName.
   init:
     enabled: false
     image:
@@ -226,6 +227,7 @@ addons:
     command: [ ]
     securityContext: { }
     volumeMounts: [ ]
+  # Gluetun sidecar in the main pod: runs under the top-level runtimeClassName.
   vpn:
     firewall: {}
     enabled: false
@@ -248,6 +250,12 @@ addons:
     persistence:
       enabled: false
       size: 1Gi
+    # Gluetun's control server (:8000) and proxies listen on the pod IP. This policy
+    # allows ingress only on declared container ports (ports, extraContainers,
+    # cloudflareTunnel.pathFilter). No-op when networkPolicy or
+    # cloudflareTunnel.networkPolicy is enabled: those already block the gluetun ports.
+    networkPolicy:
+      enabled: false
   # PostgreSQL addon - deploys a separate Deployment + Service for PostgreSQL.
   # Applications should connect via {fullname}-postgres:5432.
   postgres:
@@ -287,6 +295,17 @@ addons:
     nodeSelector: {}
     tolerations: []
     affinity: {}
+    # Own pod: does not inherit the top-level runtimeClassName. Empty uses the node default.
+    runtimeClassName: ""
+    # Allow 5432 only from this release's main pods plus the peers in `from`.
+    # Off by default: other releases in the namespace may connect to this database.
+    networkPolicy:
+      enabled: false
+      # Extra NetworkPolicy peers, e.g. another release's pods.
+      from: []
+        # - podSelector:
+        #     matchLabels:
+        #       app.kubernetes.io/instance: other-app
   cloudflareTunnel:
     enabled: false
     # FQDN that Cloudflare will route to this service (REQUIRED when enabled)
@@ -297,6 +316,7 @@ addons:
     targetPort: ""
     # Path filter: restrict which paths are exposed through the tunnel.
     # Uses an nginx sidecar proxy that returns 403 for non-matching paths.
+    # The sidecar runs in the main pod, under the top-level runtimeClassName.
     pathFilter:
       enabled: false
       # paths:
@@ -325,6 +345,9 @@ addons:
       name: ""
       # fallbackTarget: http_status:404
       # noTlsVerify: false
+      # RuntimeClass for the operator's cloudflared pod, set through the CR's deployPatch.
+      # Not available with tunnelRef: that tunnel's pod is managed elsewhere.
+      runtimeClassName: ""
       cloudflare:
         accountId: ""       # REQUIRED if tunnel.create is true
         domain: ""          # REQUIRED if tunnel.create is true
@@ -341,6 +364,7 @@ addons:
   # Infisical secrets-operator addon - renders an InfisicalSecret CR that syncs a
   # secrets path into a managed Kubernetes Secret and injects it via envFrom.
   # Requires the operator (CRD secrets.infisical.com/v1alpha1) in the cluster.
+  # Renders no pod, so runtimeClassName does not apply.
   infisical:
     enabled: false
     # Self-hosted instance API URL, e.g. https://infisical.example.com/api.

@@ -18,7 +18,7 @@ Run from this directory (`charts/workload`):
 
 Each Kubernetes resource has a top-level template file (`templates/*.yaml`) that includes helpers from `templates/_helpers/_*.tpl`. The top-level files contain conditional rendering logic and `---` document separators; the helpers contain the actual resource definitions via `define`/`include`.
 
-- `_common.tpl` — fullname, labels, selectorLabels, serviceAccountName
+- `_common.tpl` — fullname, labels, selectorLabels, mainPodSelector, serviceAccountName. The postgres addon pod also matches `selectorLabels` (it adds only `app.kubernetes.io/component: postgres`), so a policy meant for the main pod must use `mainPodSelector`
 - `_pod.tpl` — pod template spec (containers, volumes, sidecars)
 - `_container.tpl` — main application container
 - `_deployment.tpl` / `_statefulset.tpl` — workload controllers

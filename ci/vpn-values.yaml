@@ -1,0 +1,22 @@
+image:
+  repository: nginx
+  tag: "1.27"
+runtimeClassName: gvisor
+ports:
+  - name: http
+    port: 8080
+    service:
+      enabled: true
+  - name: dht
+    port: 6881
+    protocol: UDP
+addons:
+  vpn:
+    enabled: true
+    provider:
+      name: mullvad
+      type: wireguard
+    wireguard:
+      privateKey: not-a-key
+    networkPolicy:
+      enabled: true

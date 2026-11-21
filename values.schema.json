@@ -983,6 +983,17 @@
               "type": "boolean",
               "default": false,
               "description": "Share process namespace with the main container"
+            },
+            "networkPolicy": {
+              "type": "object",
+              "description": "NetworkPolicy keeping gluetun's control server and proxy ports unreachable from other pods",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Allow ingress only on declared container ports. No-op when networkPolicy or cloudflareTunnel.networkPolicy is enabled."
+                }
+              }
             }
           }
         },
@@ -1110,6 +1121,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Disable TLS verification to backend services globally"
+                },
+                "runtimeClassName": {
+                  "type": "string",
+                  "default": "",
+                  "description": "RuntimeClass for the operator's cloudflared pod, rendered as the CR's deployPatch"
                 },
                 "cloudflare": {
                   "type": "object",
@@ -1333,6 +1349,30 @@
             "affinity": {
               "type": "object",
               "description": "Affinity rules for the PostgreSQL pod"
+            },
+            "runtimeClassName": {
+              "type": "string",
+              "default": "",
+              "description": "RuntimeClass for the PostgreSQL pod. Does not inherit the top-level runtimeClassName."
+            },
+            "networkPolicy": {
+              "type": "object",
+              "description": "NetworkPolicy restricting PostgreSQL ingress to this release's main pods",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Allow 5432 only from this release's main pods and the peers in from"
+                },
+                "from": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  },
+                  "default": [],
+                  "description": "Extra NetworkPolicy peers (podSelector/namespaceSelector/ipBlock) allowed to reach PostgreSQL"
+                }
+              }
             }
           }
         },

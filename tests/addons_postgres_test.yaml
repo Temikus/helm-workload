@@ -317,3 +317,161 @@ tests:
       - equal:
           path: spec.ports[0].port
           value: 5433
+
+  - it: should not set runtimeClassName on postgres by default
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 0
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            password: postgres-password
+    asserts:
+      - notExists:
+          path: spec.template.spec.runtimeClassName
+
+  - it: should set postgres runtimeClassName when given
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 0
+    set:
+      addons:
+        postgres:
+          enabled: true
+          runtimeClassName: kata
+          auth:
+            password: postgres-password
+    asserts:
+      - equal:
+          path: spec.template.spec.runtimeClassName
+          value: kata
+
+  - it: should not inherit the top-level runtimeClassName on postgres
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 0
+    set:
+      runtimeClassName: gvisor
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            password: postgres-password
+    asserts:
+      - notExists:
+          path: spec.template.spec.runtimeClassName
+
+  - it: should render only Deployment and Service when networkPolicy is unset
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            password: postgres-password
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: should restrict postgres ingress to the release's main pods
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 2
+    release:
+      name: myapp
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            password: postgres-password
+          networkPolicy:
+            enabled: true
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: metadata.name
+          value: myapp-workload-postgres
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/name: workload
+            app.kubernetes.io/instance: myapp
+            app.kubernetes.io/component: postgres
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+      - equal:
+          path: spec.ingress
+          value:
+            - ports:
+                - protocol: TCP
+                  port: 5432
+              from:
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: workload
+                      app.kubernetes.io/instance: myapp
+                    matchExpressions:
+                      - key: app.kubernetes.io/component
+                        operator: NotIn
+                        values:
+                          - postgres
+
+  - it: should target container port 5432 even with a custom service port
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 2
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            password: postgres-password
+          service:
+            port: 5433
+          networkPolicy:
+            enabled: true
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 5432
+
+  - it: should append extra peers to the postgres NetworkPolicy
+    values:
+      - ../values.yaml
+    template: postgres.yaml
+    documentIndex: 2
+    set:
+      addons:
+        postgres:
+          enabled: true
+          auth:
+            password: postgres-password
+          networkPolicy:
+            enabled: true
+            from:
+              - podSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: other-app
+    asserts:
+      - lengthEqual:
+          path: spec.ingress[0].from
+          count: 2
+      - equal:
+          path: spec.ingress[0].from[1]
+          value:
+            podSelector:
+              matchLabels:
+                app.kubernetes.io/instance: other-app
