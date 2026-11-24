@@ -23,6 +23,7 @@ Each Kubernetes resource has a top-level template file (`templates/*.yaml`) that
 - `_container.tpl` — main application container
 - `_deployment.tpl` / `_statefulset.tpl` — workload controllers
 - `_network_policy.tpl` — general-purpose NetworkPolicy
+- `_pod_monitor.tpl` — Prometheus Operator PodMonitor for the main pods
 - `_env_configmap.tpl` / `_env_secret.tpl` — `env` ConfigMap and `secretEnv` Secret
 - `_addons_*.tpl` — addon sidecar definitions
 

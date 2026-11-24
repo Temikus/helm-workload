@@ -66,7 +66,8 @@ release BUMP:
 
 # Validate manifests rendered from ci/*-values.yaml against Kubernetes schemas.
 # CRD schemas are vendored in ci/schemas: cloudflare-operator v0.13.1 (converted
-# with kubeconform's openapi2jsonschema.py) and Infisical from datreeio/CRDs-catalog.
+# with kubeconform's openapi2jsonschema.py); Infisical and PodMonitor from
+# datreeio/CRDs-catalog.
 _validate-manifests KUBERNETES_VERSION="1.37.1":
     #!/usr/bin/env bash
     set -euo pipefail

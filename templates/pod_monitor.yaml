@@ -1,0 +1,3 @@
+{{- if .Values.podMonitor.enabled }}
+{{- include "hwl.podMonitor" . }}
+{{- end }}
