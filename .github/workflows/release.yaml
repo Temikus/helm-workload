@@ -13,7 +13,7 @@ env:
   # renovate: datasource=github-releases depName=helm/helm
   HELM_VERSION: v4.3.2
   # renovate: datasource=github-releases depName=helm-unittest/helm-unittest
-  HELM_UNITTEST_VERSION: v1.2.1
+  HELM_UNITTEST_VERSION: v1.3.0
   CHART_REPO: oci://ghcr.io/temikus/helm-charts
 
 jobs:
